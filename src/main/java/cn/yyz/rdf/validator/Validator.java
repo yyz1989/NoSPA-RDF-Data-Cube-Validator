@@ -1,4 +1,4 @@
-package org.yyz.rdf.validator;
+package cn.yyz.rdf.validator;
 
 import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.*;
