@@ -1,4 +1,4 @@
-package org.yyz.rdf.validator;
+package cn.yyz.rdf.validator;
 
 /**
  * Created by yyz on 9/26/14.
