@@ -6,7 +6,8 @@ package cn.yyz.rdf.validator;
 public enum IntegrityConstraint {
     IC1(
             "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n" +
+                    "SELECT ?obs " +
+                    "WHERE {\n" +
                     "  {\n" +
                     "    # Check observation has a data set\n" +
                     "    ?obs a qb:Observation .\n" +
@@ -22,7 +23,8 @@ public enum IntegrityConstraint {
 
     IC2(
             "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n" +
+                    "SELECT ?dataset " +
+                    "WHERE {\n" +
                     "  {\n" +
                     "    # Check dataset has a dsd\n" +
                     "    ?dataset a qb:DataSet .\n" +
@@ -38,7 +40,8 @@ public enum IntegrityConstraint {
 
     IC3(
             "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n" +
+                    "SELECT ?dsd " +
+                    "WHERE {\n" +
                     "  ?dsd a qb:DataStructureDefinition .\n" +
                     "  FILTER NOT EXISTS { ?dsd qb:component [qb:componentProperty [a qb:MeasureProperty]] }\n" +
                     "}"
@@ -46,7 +49,8 @@ public enum IntegrityConstraint {
 
     IC4(
             "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n"+
+                    "SELECT ?dim " +
+                    "WHERE {\n"+
                     "  ?dim a qb:DimensionProperty .\n"+
                     "  FILTER NOT EXISTS { ?dim rdfs:range [] }\n"+
                     "}"
@@ -54,7 +58,8 @@ public enum IntegrityConstraint {
 
     IC5(
             "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n" +
+                    "SELECT ?dim " +
+                    "WHERE {\n" +
                     "  ?dim a qb:DimensionProperty ;\n" +
                     "       rdfs:range skos:Concept .\n" +
                     "  FILTER NOT EXISTS { ?dim qb:codeList [] }\n" +
