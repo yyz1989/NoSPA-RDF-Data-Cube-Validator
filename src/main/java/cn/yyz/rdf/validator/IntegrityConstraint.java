@@ -4,56 +4,57 @@ package cn.yyz.rdf.validator;
  * Created by yyz on 9/26/14.
  */
 public enum IntegrityConstraint {
-    PREFIX(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n"
-    ),
-
     IC1(
-            "ASK {\n" +
-                   "  {\n" +
-                   "    # Check observation has a data set\n" +
-                   "    ?obs a qb:Observation .\n" +
-                   "    FILTER NOT EXISTS { ?obs qb:dataSet ?dataset1 . }\n" +
-                   "  } UNION {\n" +
-                   "    # Check has just one data set\n" +
-                   "    ?obs a qb:Observation ;\n" +
-                   "       qb:dataSet ?dataset1, ?dataset2 .\n" +
-                   "    FILTER (?dataset1 != ?dataset2)\n" +
-                   "  }\n" +
-                   "}"
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
+                    "  {\n" +
+                    "    # Check observation has a data set\n" +
+                    "    ?obs a qb:Observation .\n" +
+                    "    FILTER NOT EXISTS { ?obs qb:dataSet ?dataset1 . }\n" +
+                    "  } UNION {\n" +
+                    "    # Check has just one data set\n" +
+                    "    ?obs a qb:Observation ;\n" +
+                    "       qb:dataSet ?dataset1, ?dataset2 .\n" +
+                    "    FILTER (?dataset1 != ?dataset2)\n" +
+                    "  }\n" +
+                    "}"
     ),
 
     IC2(
-            "ASK {\n" +
-                   "  {\n" +
-                   "    # Check dataset has a dsd\n" +
-                   "    ?dataset a qb:DataSet .\n" +
-                   "    FILTER NOT EXISTS { ?dataset qb:structure ?dsd . }\n" +
-                   "  } UNION { \n" +
-                   "    # Check has just one dsd\n" +
-                   "    ?dataset a qb:DataSet ;\n" +
-                   "       qb:structure ?dsd1, ?dsd2 .\n" +
-                   "    FILTER (?dsd1 != ?dsd2)\n" +
-                   "  }\n" +
-                   "}"
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
+                    "  {\n" +
+                    "    # Check dataset has a dsd\n" +
+                    "    ?dataset a qb:DataSet .\n" +
+                    "    FILTER NOT EXISTS { ?dataset qb:structure ?dsd . }\n" +
+                    "  } UNION { \n" +
+                    "    # Check has just one dsd\n" +
+                    "    ?dataset a qb:DataSet ;\n" +
+                    "       qb:structure ?dsd1, ?dsd2 .\n" +
+                    "    FILTER (?dsd1 != ?dsd2)\n" +
+                    "  }\n" +
+                    "}"
     ),
 
     IC3(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "  ?dsd a qb:DataStructureDefinition .\n" +
                     "  FILTER NOT EXISTS { ?dsd qb:component [qb:componentProperty [a qb:MeasureProperty]] }\n" +
                     "}"
     ),
 
     IC4(
-            "ASK {\n"+
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n"+
                     "  ?dim a qb:DimensionProperty .\n"+
                     "  FILTER NOT EXISTS { ?dim rdfs:range [] }\n"+
                     "}"
     ),
 
     IC5(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "  ?dim a qb:DimensionProperty ;\n" +
                     "       rdfs:range skos:Concept .\n" +
                     "  FILTER NOT EXISTS { ?dim qb:codeList [] }\n" +
@@ -61,7 +62,8 @@ public enum IntegrityConstraint {
     ),
 
     IC6(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "  ?dsd qb:component ?componentSpec .\n" +
                     "  ?componentSpec qb:componentRequired \"false\"^^xsd:boolean ;\n" +
                     "                 qb:componentProperty ?component .\n" +
@@ -70,14 +72,16 @@ public enum IntegrityConstraint {
     ),
 
     IC7(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    ?sliceKey a qb:SliceKey .\n" +
                     "    FILTER NOT EXISTS { [a qb:DataStructureDefinition] qb:sliceKey ?sliceKey }\n" +
                     "}"
     ),
 
     IC8(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "  ?slicekey a qb:SliceKey;\n" +
                     "      qb:componentProperty ?prop .\n" +
                     "  ?dsd qb:sliceKey ?slicekey .\n" +
@@ -86,7 +90,8 @@ public enum IntegrityConstraint {
     ),
 
     IC9(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "  {\n" +
                     "    # Slice has a key\n" +
                     "    ?slice a qb:Slice .\n" +
@@ -101,14 +106,16 @@ public enum IntegrityConstraint {
     ),
 
     IC10(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "  ?slice qb:sliceStructure [qb:componentProperty ?dim] .\n" +
                     "  FILTER NOT EXISTS { ?slice ?dim [] }\n" +
                     "}"
     ),
 
     IC11(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty;\n" +
                     "    FILTER NOT EXISTS { ?obs ?dim [] }\n" +
@@ -116,7 +123,8 @@ public enum IntegrityConstraint {
     ),
 
     IC12(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "  FILTER( ?allEqual )\n" +
                     "  {\n" +
                     "    # For each pair of observations test if all the dimension values are the same\n" +
@@ -135,7 +143,8 @@ public enum IntegrityConstraint {
     ),
 
     IC13(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component ?component .\n" +
                     "    ?component qb:componentRequired \"true\"^^xsd:boolean ;\n" +
                     "               qb:componentProperty ?attr .\n" +
@@ -144,7 +153,8 @@ public enum IntegrityConstraint {
     ),
 
     IC14(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    # Observation in a non-measureType cube\n" +
                     "    ?obs qb:dataSet/qb:structure ?dsd .\n" +
                     "    FILTER NOT EXISTS { ?dsd qb:component/qb:componentProperty qb:measureType }\n" +
@@ -157,7 +167,8 @@ public enum IntegrityConstraint {
     ),
 
     IC15(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    # Observation in a measureType-cube\n" +
                     "    ?obs qb:dataSet/qb:structure ?dsd ;\n" +
                     "         qb:measureType ?measure .\n" +
@@ -168,7 +179,8 @@ public enum IntegrityConstraint {
     ),
 
     IC16(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    # Observation with measureType\n" +
                     "    ?obs qb:dataSet/qb:structure ?dsd ;\n" +
                     "         qb:measureType ?measure ;\n" +
@@ -183,7 +195,8 @@ public enum IntegrityConstraint {
     ),
 
     IC17(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "  {\n" +
                     "      # Count number of other measures found at each point \n" +
                     "      SELECT ?numMeasures (COUNT(?obs2) AS ?count) WHERE {\n" +
@@ -219,7 +232,8 @@ public enum IntegrityConstraint {
     ),
 
     IC18(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    ?dataset qb:slice       ?slice .\n" +
                     "    ?slice   qb:observation ?obs .\n" +
                     "    FILTER NOT EXISTS { ?obs qb:dataSet ?dataset . }\n" +
@@ -227,7 +241,8 @@ public enum IntegrityConstraint {
     ),
 
     IC19_ConceptScheme(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
                     "        qb:codeList ?list .\n" +
@@ -238,7 +253,8 @@ public enum IntegrityConstraint {
     ),
 
     IC19_Collection(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
                     "        qb:codeList ?list .\n" +
@@ -249,7 +265,8 @@ public enum IntegrityConstraint {
     ),
 
     IC20_1(
-            "SELECT ?p WHERE {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "SELECT ?p WHERE {\n" +
                     "    ?hierarchy a qb:HierarchicalCodeList ;\n" +
                     "                 qb:parentChildProperty ?p .\n" +
                     "    FILTER ( isIRI(?p) )\n" +
@@ -257,7 +274,8 @@ public enum IntegrityConstraint {
     ),
 
     IC20_2(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
                     "        qb:codeList ?list .\n" +
@@ -268,7 +286,8 @@ public enum IntegrityConstraint {
     ),
 
     IC21_1(
-            "SELECT ?p WHERE {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "SELECT ?p WHERE {\n" +
                     "    ?hierarchy a qb:HierarchicalCodeList;\n" +
                     "                 qb:parentChildProperty ?pcp .\n" +
                     "    FILTER( isBlank(?pcp) )\n" +
@@ -278,7 +297,8 @@ public enum IntegrityConstraint {
     ),
 
     IC21_2(
-            "ASK {\n" +
+            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
                     "         qb:codeList ?list .\n" +

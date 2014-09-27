@@ -6,6 +6,7 @@ import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
 
 import java.io.InputStream;
+import java.util.List;
 
 /**
  * Created by yyz on 9/26/14.
@@ -59,8 +60,6 @@ public class Validator {
 
     public void normalize() {
         // Phase 1: Type and property closure
-
-        //
         NodeIterator nodeIterator = model.listObjectsOfProperty(QB_observation);
         while (nodeIterator.hasNext()) {
             model.add(nodeIterator.next().asResource(), RDF_type, QB_Observation);
@@ -100,59 +99,21 @@ public class Validator {
         }
 
         // Phase 2: Push down attachment levels
-
-        String queryString = "" +
-                "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                "\n" +
-                "\n" +
-                "SELECT ?obs ?comp ?value\n" +
-                "WHERE {\n" +
-                "    ?spec    qb:componentProperty ?comp ;\n" +
-                "             qb:componentAttachment qb:DataSet .\n" +
-                "    ?dataset qb:structure [qb:component ?spec];\n" +
-                "             ?comp ?value .\n" +
-                "    ?obs     qb:dataSet ?dataset.\n" +
-                "}";
-
-        Query query = QueryFactory.create(queryString);
-        QueryExecution qe = QueryExecutionFactory.create(query, model);
-
-        ResultSet results = qe.execSelect();
-        qe.close();
-
-// Output query results
-        ResultSetFormatter.out(System.out, results, query);
-
-// Important - free up resources used running the query
-
+        String queryString = NormalizationAlgorithm.PHASE2.getValue();
+        UpdateAction.parseExecute(queryString, model);
     }
 
-    public void checkIC12() {
-        String queryString = "" +
-                "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                "ASK {\n" +
-                "  FILTER( ?allEqual )\n" +
-                "  {\n" +
-                "    # For each pair of observations test if all the dimension values are the same\n" +
-                "    SELECT (MIN(?equal) AS ?allEqual) WHERE {\n" +
-                "        ?obs1 qb:dataSet ?dataset .\n" +
-                "        ?obs2 qb:dataSet ?dataset .\n" +
-                "        FILTER (?obs1 != ?obs2)\n" +
-                "        ?dataset qb:structure/qb:component/qb:componentProperty ?dim .\n" +
-                "        ?dim a qb:DimensionProperty .\n" +
-                "        ?obs1 ?dim ?value1 .\n" +
-                "        ?obs2 ?dim ?value2 .\n" +
-                "        BIND( ?value1 = ?value2 AS ?equal)\n" +
-                "    } GROUP BY ?obs1 ?obs2\n" +
-                "  }\n" +
-                "}";
-
-        Query query = QueryFactory.create(queryString);
+    public void checkConstraint(String constraint) {
+        Query query = QueryFactory.create(IntegrityConstraint.valueOf(constraint).getValue());
         QueryExecution qe = QueryExecutionFactory.create(query, model);
         System.out.println(qe.execAsk());
         qe.close();
+    }
 
-
-        //ResultSetFormatter.out(System.out, results, query);
+    public void checkConstraint(IntegrityConstraint constraint) {
+        Query query = QueryFactory.create(constraint.getValue());
+        QueryExecution qe = QueryExecutionFactory.create(query, model);
+        System.out.println(qe.execAsk());
+        qe.close();
     }
 }
