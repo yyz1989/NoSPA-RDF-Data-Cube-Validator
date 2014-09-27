@@ -5,7 +5,7 @@ package cn.yyz.rdf.validator;
  */
 public class Main {
     public static void main(String[] args) {
-        Validator validator = new Validator("largeTest.ttl", "TTL");
-        validator.checkIC12();
+        Validator validator = new Validator("test.ttl", "TTL");
+        validator.checkConstraint("IC2");
     }
 }
