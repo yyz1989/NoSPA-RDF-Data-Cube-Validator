@@ -6,6 +6,7 @@ import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
 
 import javax.swing.plaf.nimbus.State;
+import javax.xml.soap.Node;
 import java.io.InputStream;
 import java.util.*;
 
@@ -15,6 +16,8 @@ import java.util.*;
 public class Validator {
     private static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";
     private static final String PREFIX_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    private static final String PREFIX_RDFS = "http://www.w3.org/2000/01/rdf-schema#";
+    private static final String PREFIX_SKOS = "http://www.w3.org/2004/02/skos/core#";
 
     private static final Property RDF_type = ResourceFactory.createProperty(
             PREFIX_RDF + "type");
@@ -50,6 +53,14 @@ public class Validator {
             PREFIX_CUBE + "componentAttachment");
     private static final Property QB_structure = ResourceFactory.createProperty(
             PREFIX_CUBE + "structure");
+    private static final Property QB_DataStructureDefinition =
+            ResourceFactory.createProperty(PREFIX_CUBE + "DataStructureDefinition");
+    private static final Property QB_codeList = ResourceFactory.createProperty(
+            PREFIX_CUBE + "codeList");
+    private static final Property RDFS_range = ResourceFactory.createProperty(
+            PREFIX_RDFS + "range");
+    private static final Property SKOS_Concept = ResourceFactory.createProperty(
+            PREFIX_SKOS + "Concept");
 
     private Model model;
     private Map<Resource, Set<Resource>> dimensionMap =
@@ -61,6 +72,10 @@ public class Validator {
         if (inputStream == null) throw new IllegalArgumentException(
                 "File " + filename + " not found");
         model.read(inputStream, null, format);
+    }
+
+    public void output() {
+        model.write(System.out, "TURTLE");
     }
 
     public void normalize() {
@@ -129,20 +144,88 @@ public class Validator {
     }
 
     public void checkIC1() {
-        ResIterator observationIterator = model.listResourcesWithProperty(
+        ResIterator observationIterator = model.listSubjectsWithProperty(
                 RDF_type, QB_Observation);
         while (observationIterator.hasNext()) {
             Resource observation = observationIterator.nextResource();
             NodeIterator dataSetIterator = model.listObjectsOfProperty(
                     observation, QB_dataSet);
-            if (dataSetIterator.toList().size() != 1) {
-                System.out.println(observation + ": " + dataSetIterator.toList());
+            Set dataSetSet = dataSetIterator.toSet();
+            if (dataSetSet.size() != 1) {
+                System.out.println(observation + ": " + dataSetSet);
             }
         }
 
     }
 
     public void checkIC2() {
+        ResIterator dataSetIterator = model.listSubjectsWithProperty(
+                RDF_type, QB_DataSet);
+        while (dataSetIterator.hasNext()) {
+            Resource dataSet = dataSetIterator.nextResource();
+            NodeIterator dsdIterator = model.listObjectsOfProperty(dataSet, QB_structure);
+            Set dsdSet = dsdIterator.toSet();
+            if (dsdSet.size() != 1) {
+                System.out.println(dataSet + ": " + dsdSet);
+            }
+        }
+    }
+
+    public void checkIC3() {
+        ResIterator dsdIterator = model.listSubjectsWithProperty(RDF_type,
+                QB_DataStructureDefinition);
+        while (dsdIterator.hasNext()) {
+            Set<Resource> measureSet = new HashSet<Resource>();
+            Resource dsd = dsdIterator.nextResource();
+            NodeIterator componentIterator = model.listObjectsOfProperty(dsd, QB_component);
+            while (componentIterator.hasNext()) {
+                Resource component = componentIterator.next().asResource();
+                NodeIterator measureIterator = model.listObjectsOfProperty(
+                        component, QB_measure);
+                while (measureIterator.hasNext()) {
+                    Resource measure = measureIterator.next().asResource();
+                    StmtIterator measurePropertyIterator = model.listStatements(
+                            measure, RDF_type, QB_MeasureProperty);
+                    if (measurePropertyIterator.hasNext()) measureSet.add(measure);
+                }
+            }
+            if (measureSet.size() == 0) {
+                System.out.println(dsd);
+            }
+        }
+
+    }
+
+    public void checkIC4() {
+        ResIterator dimensionIterator = model.listSubjectsWithProperty(RDF_type,
+                QB_DimensionProperty);
+        while (dimensionIterator.hasNext()) {
+            Resource dimension = dimensionIterator.nextResource();
+            NodeIterator rangeIterator = model.listObjectsOfProperty(dimension, RDFS_range);
+            if (!rangeIterator.hasNext()) {
+                System.out.println(dimension);
+            }
+        }
+    }
+
+    public void checkIC5() {
+        ResIterator dimensionIterator1 = model.listSubjectsWithProperty(RDF_type,
+                QB_DimensionProperty);
+        ResIterator dimensionIterator2 = model.listSubjectsWithProperty(RDFS_range,
+                SKOS_Concept);
+        Set<Resource> dimesnsionSet = dimensionIterator1.toSet();
+        dimesnsionSet.retainAll(dimensionIterator2.toSet());
+
+        for(Resource dimension : dimesnsionSet) {
+            NodeIterator codeListIterator = model.listObjectsOfProperty(dimension,
+                    QB_codeList);
+            if (!codeListIterator.hasNext()) {
+                System.out.println(dimension);
+            }
+        }
+    }
+
+    public void checkIC6() {
         ResIterator resIterator = model.listResourcesWithProperty(RDF_type, QB_DataSet);
         while (resIterator.hasNext()) {
             Resource dataSet = resIterator.nextResource();
