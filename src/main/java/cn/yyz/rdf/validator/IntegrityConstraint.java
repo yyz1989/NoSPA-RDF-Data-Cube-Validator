@@ -49,6 +49,7 @@ public enum IntegrityConstraint {
 
     IC4(
             "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
                     "SELECT ?dim " +
                     "WHERE {\n"+
                     "  ?dim a qb:DimensionProperty .\n"+
@@ -58,6 +59,8 @@ public enum IntegrityConstraint {
 
     IC5(
             "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+                    "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n" +
                     "SELECT ?dim " +
                     "WHERE {\n" +
                     "  ?dim a qb:DimensionProperty ;\n" +
