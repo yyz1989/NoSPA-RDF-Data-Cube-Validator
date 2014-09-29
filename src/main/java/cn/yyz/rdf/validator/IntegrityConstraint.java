@@ -4,8 +4,15 @@ package cn.yyz.rdf.validator;
  * Created by yyz on 9/26/14.
  */
 public enum IntegrityConstraint {
-    IC1(
+    PREFIX(
             "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
+                    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+                    "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n" +
+                    "PREFIX owl: <http://www.w3.org/2002/07/owl#>\n" +
+                    "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n"
+    ),
+
+    IC1(
                     "SELECT ?obs " +
                     "WHERE {\n" +
                     "  {\n" +
@@ -22,7 +29,6 @@ public enum IntegrityConstraint {
     ),
 
     IC2(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "SELECT ?dataset " +
                     "WHERE {\n" +
                     "  {\n" +
@@ -39,7 +45,6 @@ public enum IntegrityConstraint {
     ),
 
     IC3(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "SELECT ?dsd " +
                     "WHERE {\n" +
                     "  ?dsd a qb:DataStructureDefinition .\n" +
@@ -48,8 +53,6 @@ public enum IntegrityConstraint {
     ),
 
     IC4(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
                     "SELECT ?dim " +
                     "WHERE {\n"+
                     "  ?dim a qb:DimensionProperty .\n"+
@@ -58,9 +61,6 @@ public enum IntegrityConstraint {
     ),
 
     IC5(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
-                    "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n" +
                     "SELECT ?dim " +
                     "WHERE {\n" +
                     "  ?dim a qb:DimensionProperty ;\n" +
@@ -70,8 +70,8 @@ public enum IntegrityConstraint {
     ),
 
     IC6(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n" +
+                    "SELECT ?component " +
+                    "WHERE {\n" +
                     "  ?dsd qb:component ?componentSpec .\n" +
                     "  ?componentSpec qb:componentRequired \"false\"^^xsd:boolean ;\n" +
                     "                 qb:componentProperty ?component .\n" +
@@ -80,16 +80,16 @@ public enum IntegrityConstraint {
     ),
 
     IC7(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n" +
+                    "SELECT ?sliceKey " +
+                    "WHERE {\n" +
                     "    ?sliceKey a qb:SliceKey .\n" +
                     "    FILTER NOT EXISTS { [a qb:DataStructureDefinition] qb:sliceKey ?sliceKey }\n" +
                     "}"
     ),
 
     IC8(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n" +
+                    "SELECT ?prop " +
+                    "WHERE {\n" +
                     "  ?slicekey a qb:SliceKey;\n" +
                     "      qb:componentProperty ?prop .\n" +
                     "  ?dsd qb:sliceKey ?slicekey .\n" +
@@ -98,8 +98,8 @@ public enum IntegrityConstraint {
     ),
 
     IC9(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n" +
+                    "SELECT ?slice " +
+                    "WHERE {\n" +
                     "  {\n" +
                     "    # Slice has a key\n" +
                     "    ?slice a qb:Slice .\n" +
@@ -114,15 +114,14 @@ public enum IntegrityConstraint {
     ),
 
     IC10(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "ASK {\n" +
+                    "SELECT ?slice ?dim " +
+                    "WHERE {\n" +
                     "  ?slice qb:sliceStructure [qb:componentProperty ?dim] .\n" +
                     "  FILTER NOT EXISTS { ?slice ?dim [] }\n" +
                     "}"
     ),
 
     IC11(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty;\n" +
@@ -131,7 +130,6 @@ public enum IntegrityConstraint {
     ),
 
     IC12(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "  FILTER( ?allEqual )\n" +
                     "  {\n" +
@@ -151,7 +149,6 @@ public enum IntegrityConstraint {
     ),
 
     IC13(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component ?component .\n" +
                     "    ?component qb:componentRequired \"true\"^^xsd:boolean ;\n" +
@@ -161,7 +158,6 @@ public enum IntegrityConstraint {
     ),
 
     IC14(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    # Observation in a non-measureType cube\n" +
                     "    ?obs qb:dataSet/qb:structure ?dsd .\n" +
@@ -175,7 +171,6 @@ public enum IntegrityConstraint {
     ),
 
     IC15(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    # Observation in a measureType-cube\n" +
                     "    ?obs qb:dataSet/qb:structure ?dsd ;\n" +
@@ -187,7 +182,6 @@ public enum IntegrityConstraint {
     ),
 
     IC16(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    # Observation with measureType\n" +
                     "    ?obs qb:dataSet/qb:structure ?dsd ;\n" +
@@ -203,7 +197,6 @@ public enum IntegrityConstraint {
     ),
 
     IC17(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "  {\n" +
                     "      # Count number of other measures found at each point \n" +
@@ -240,7 +233,6 @@ public enum IntegrityConstraint {
     ),
 
     IC18(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    ?dataset qb:slice       ?slice .\n" +
                     "    ?slice   qb:observation ?obs .\n" +
@@ -249,7 +241,6 @@ public enum IntegrityConstraint {
     ),
 
     IC19_ConceptScheme(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
@@ -261,7 +252,6 @@ public enum IntegrityConstraint {
     ),
 
     IC19_Collection(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
@@ -273,7 +263,6 @@ public enum IntegrityConstraint {
     ),
 
     IC20_1(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "SELECT ?p WHERE {\n" +
                     "    ?hierarchy a qb:HierarchicalCodeList ;\n" +
                     "                 qb:parentChildProperty ?p .\n" +
@@ -282,7 +271,6 @@ public enum IntegrityConstraint {
     ),
 
     IC20_2(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
@@ -294,7 +282,6 @@ public enum IntegrityConstraint {
     ),
 
     IC21_1(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "SELECT ?p WHERE {\n" +
                     "    ?hierarchy a qb:HierarchicalCodeList;\n" +
                     "                 qb:parentChildProperty ?pcp .\n" +
@@ -305,7 +292,6 @@ public enum IntegrityConstraint {
     ),
 
     IC21_2(
-            "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
                     "ASK {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +

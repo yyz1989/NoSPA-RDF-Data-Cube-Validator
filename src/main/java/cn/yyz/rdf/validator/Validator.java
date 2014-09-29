@@ -33,6 +33,12 @@ public class Validator {
             PREFIX_CUBE + "slice");
     private static final Property QB_Slice = ResourceFactory.createProperty(
             PREFIX_CUBE + "Slice");
+    private static final Property QB_sliceKey = ResourceFactory.createProperty(
+            PREFIX_CUBE + "sliceKey");
+    private static final Property QB_SliceKey = ResourceFactory.createProperty(
+            PREFIX_CUBE + "SliceKey");
+    private static final Property QB_sliceStructure = ResourceFactory.createProperty(
+            PREFIX_CUBE + "sliceStructure");
     private static final Property QB_component = ResourceFactory.createProperty(
             PREFIX_CUBE + "component");
     private static final Property QB_componentProperty = ResourceFactory.createProperty(
@@ -51,6 +57,8 @@ public class Validator {
             PREFIX_CUBE + "attribute");
     private static final Property QB_componentAttachment = ResourceFactory.createProperty(
             PREFIX_CUBE + "componentAttachment");
+    private static final Property QB_componentRequired = ResourceFactory.createProperty(
+            PREFIX_CUBE + "componentRequired");
     private static final Property QB_structure = ResourceFactory.createProperty(
             PREFIX_CUBE + "structure");
     private static final Property QB_DataStructureDefinition =
@@ -61,6 +69,10 @@ public class Validator {
             PREFIX_RDFS + "range");
     private static final Property SKOS_Concept = ResourceFactory.createProperty(
             PREFIX_SKOS + "Concept");
+    private static final Literal LITERAL_FALSE = ResourceFactory.createTypedLiteral(
+            Boolean.FALSE);
+    private static final Literal LITERAL_TRUE = ResourceFactory.createTypedLiteral(
+            Boolean.TRUE);
 
     private Model model;
     private Map<Resource, Set<Resource>> dimensionMap =
@@ -129,13 +141,14 @@ public class Validator {
     }
 
     public void checkConstraint(IntegrityConstraint constraint) {
-        Query query = QueryFactory.create(constraint.getValue());
+        String prefix = IntegrityConstraint.PREFIX.getValue();
+        Query query = QueryFactory.create(prefix + constraint.getValue());
         QueryExecution qe = QueryExecutionFactory.create(query, model);
         ResultSet resultSet = qe.execSelect();
         List<String> variables = resultSet.getResultVars();
         while (resultSet.hasNext()) {
+            QuerySolution querySolution = resultSet.next();
             for (String var : variables) {
-                QuerySolution querySolution = resultSet.next();
                 System.out.print(var + ": " + querySolution.get(var) + "    ");
             }
             System.out.println();
@@ -202,7 +215,7 @@ public class Validator {
         while (dimensionIterator.hasNext()) {
             Resource dimension = dimensionIterator.nextResource();
             NodeIterator rangeIterator = model.listObjectsOfProperty(dimension, RDFS_range);
-            if (!rangeIterator.hasNext()) {
+            if (rangeIterator.hasNext()) {
                 System.out.println(dimension);
             }
         }
@@ -219,13 +232,134 @@ public class Validator {
         for(Resource dimension : dimesnsionSet) {
             NodeIterator codeListIterator = model.listObjectsOfProperty(dimension,
                     QB_codeList);
-            if (!codeListIterator.hasNext()) {
+            if (codeListIterator.hasNext()) {
                 System.out.println(dimension);
             }
         }
     }
 
     public void checkIC6() {
+        ResIterator componentSpecIterator1 = model.listSubjectsWithProperty(
+                QB_componentRequired, LITERAL_FALSE);
+        ResIterator componentSpecIterator2 = model.listSubjectsWithProperty(
+                QB_componentProperty, (RDFNode) null);
+        NodeIterator componentSpecIterator3 = model.listObjectsOfProperty(
+                QB_component);
+        Set<Resource> componentSpecSet = new HashSet<Resource>();
+        for (RDFNode node : componentSpecIterator3.toSet()) {
+            componentSpecSet.add(node.asResource());
+        }
+
+        componentSpecSet.retainAll(componentSpecIterator1.toSet());
+        componentSpecSet.retainAll(componentSpecIterator2.toSet());
+
+        for (Resource componentSpec : componentSpecSet) {
+            NodeIterator componentIterator = model.listObjectsOfProperty(
+                    componentSpec, QB_componentProperty);
+            while (componentIterator.hasNext()) {
+                Resource component = componentIterator.next().asResource();
+                StmtIterator componentStmtIterator = model.listStatements(
+                        component, RDF_type, QB_AttributeProperty);
+                if (componentIterator.hasNext()) {
+                    System.out.print(component);
+                }
+            }
+        }
+
+    }
+
+    public void checkIC7() {
+        ResIterator sliceKeyIterator = model.listSubjectsWithProperty(RDF_type,
+                QB_SliceKey);
+        Set<RDFNode> sliceKeyInDSDNodeSet = new HashSet<RDFNode>();
+        ResIterator dsdIterator = model.listSubjectsWithProperty(RDF_type,
+                QB_DataStructureDefinition);
+        while (dsdIterator.hasNext()) {
+            Resource dsd = dsdIterator.nextResource();
+            NodeIterator sliceKeyInDSDIterator = model.listObjectsOfProperty(dsd,
+                    QB_sliceKey);
+            sliceKeyInDSDNodeSet.addAll(sliceKeyInDSDIterator.toList());
+        }
+        Set<Resource> sliceKeyInDSDResourceSet = new HashSet<Resource>();
+        for(RDFNode node : sliceKeyInDSDNodeSet) {
+            sliceKeyInDSDResourceSet.add(node.asResource());
+        }
+        Set<Resource> sliceKeyNotInDSDSet = sliceKeyIterator.toSet();
+        sliceKeyNotInDSDSet.removeAll(sliceKeyInDSDResourceSet);
+        System.out.println(sliceKeyNotInDSDSet);
+    }
+
+    public void checkIC8() {
+        Set<Resource> componentPropertyNotInDSDSet = new HashSet<Resource>();
+        StmtIterator sliceKeyInDSDIterator = model.listStatements(null, QB_sliceKey,
+                (RDFNode) null);
+        while (sliceKeyInDSDIterator.hasNext()) {
+            Statement statement = sliceKeyInDSDIterator.nextStatement();
+            Resource sliceKey = statement.getResource();
+            StmtIterator sliceKeyDefIterator = model.listStatements(sliceKey,
+                    RDF_type, QB_SliceKey);
+            if (sliceKeyDefIterator.hasNext()) {
+                NodeIterator componentPropertyIterator = model.listObjectsOfProperty(
+                        sliceKey, QB_componentProperty);
+                while (componentPropertyIterator.hasNext()) {
+                    RDFNode componentProperty = componentPropertyIterator.next();
+                    ResIterator componentPropertyDefIterator =
+                            model.listSubjectsWithProperty(QB_componentProperty,
+                                    componentProperty);
+                    NodeIterator componentDefIterator = model.listObjectsOfProperty(
+                            statement.getSubject(), QB_component);
+                    Set<Resource> componentSet = new HashSet<Resource>();
+                    while (componentDefIterator.hasNext()) {
+                        componentSet.add(componentDefIterator.next().asResource());
+                    }
+                    componentSet.retainAll(componentPropertyDefIterator.toSet());
+                    if (componentSet.isEmpty()) {
+                        componentPropertyNotInDSDSet.add(componentProperty.asResource());
+                    }
+                }
+            }
+        }
+        System.out.println(componentPropertyNotInDSDSet);
+    }
+
+    public void checkIC9() {
+        Map<Resource, Set<RDFNode>> sliceStructureMap =
+                new HashMap<Resource, Set<RDFNode>>();
+        ResIterator sliceIterator = model.listSubjectsWithProperty(RDF_type, QB_Slice);
+        while (sliceIterator.hasNext()) {
+            Resource slice = sliceIterator.nextResource();
+            NodeIterator sliceStructureIterator = model.listObjectsOfProperty(slice,
+                    QB_sliceStructure);
+            Set<RDFNode> sliceStructureSet = sliceStructureIterator.toSet();
+            if (sliceStructureSet.size() != 1) sliceStructureMap.put(slice,
+                    sliceStructureSet);
+        }
+        System.out.println(sliceStructureMap);
+    }
+
+    public void checkIC10() {
+        Map<Resource, Resource> sliceWithoutValue = new HashMap<Resource, Resource>();
+        StmtIterator sliceDefIterator = model.listStatements(null,
+                QB_sliceStructure, (RDFNode) null);
+        while (sliceDefIterator.hasNext()) {
+            Statement sliceStatement = sliceDefIterator.nextStatement();
+            Resource slice = sliceStatement.getSubject();
+            NodeIterator dimensionIterator = model.listObjectsOfProperty(
+                    sliceStatement.getObject().asResource(), QB_componentProperty);
+            while (dimensionIterator.hasNext()) {
+                Resource dimension = dimensionIterator.next().asResource();
+                Property dimAsProperty = ResourceFactory.createProperty(
+                        dimension.getURI());
+                NodeIterator dimensionValueIterator = model.listObjectsOfProperty(
+                        slice, dimAsProperty);
+                if (!dimensionValueIterator.hasNext()) sliceWithoutValue.put(slice,
+                        dimension);
+            }
+        }
+        System.out.println(sliceWithoutValue);
+    }
+
+    public void checkICX() {
         ResIterator resIterator = model.listResourcesWithProperty(RDF_type, QB_DataSet);
         while (resIterator.hasNext()) {
             Resource dataSet = resIterator.nextResource();
