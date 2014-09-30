@@ -77,6 +77,8 @@ public class Validator {
     private Model model;
     private Map<Resource, Set<Resource>> dimensionMap =
             new HashMap<Resource, Set<Resource>>();
+    private Map<Resource, Map<Resource, Set<Resource>>> datasetObservationValueMap =
+            new HashMap<Resource, Map<Resource, Set<Resource>>>();
 
     public Validator(String filename, String format) {
         model = ModelFactory.createDefaultModel();
@@ -359,39 +361,63 @@ public class Validator {
         System.out.println(sliceWithoutValue);
     }
 
-    public void checkICX() {
-        ResIterator resIterator = model.listResourcesWithProperty(RDF_type, QB_DataSet);
-        while (resIterator.hasNext()) {
-            Resource dataSet = resIterator.nextResource();
+    public void checkIC11_12() {
+        ResIterator dimensionIterator = model.listSubjectsWithProperty(RDF_type,
+                QB_DimensionProperty);
+        Set<Resource> dimensionSet = dimensionIterator.toSet();
+        ResIterator dataSetIterator = model.listResourcesWithProperty(RDF_type, QB_DataSet);
+        while (dataSetIterator.hasNext()) {
+            Resource dataSet = dataSetIterator.nextResource();
             dimensionMap.put(dataSet, new HashSet<Resource>());
-        }
-
-        StmtIterator dimensionIterator = model.listStatements(null, QB_dimension, (RDFNode) null);
-        while (dimensionIterator.hasNext()) {
-            Statement dimensionStatement = dimensionIterator.nextStatement();
-            Resource component = dimensionStatement.getSubject();
-            Resource dimension = dimensionStatement.getObject().asResource();
-
-            ResIterator componentIterator = model.listResourcesWithProperty(QB_component, component);
-            while (componentIterator.hasNext()) {
-                Resource dataSet = componentIterator.nextResource();
-                Set dimensions = dimensionMap.get(dataSet);
-                if (dimensions == null) dimensions = new HashSet<Resource>();
-                dimensions.add(dimension);
-                dimensionMap.put(dataSet, dimensions);
+            NodeIterator dsdIterator = model.listObjectsOfProperty(dataSet, QB_structure);
+            while (dsdIterator.hasNext()) {
+                Resource dsd = dsdIterator.next().asResource();
+                Set<Resource> componentPropertySet = new HashSet<Resource>();
+                NodeIterator componentIterator = model.listObjectsOfProperty(dsd,
+                        QB_component);
+                while (componentIterator.hasNext()) {
+                    Resource component = componentIterator.next().asResource();
+                    NodeIterator componentPropertyIterator = model.listObjectsOfProperty(
+                            component, QB_componentProperty);
+                    while (componentPropertyIterator.hasNext()) {
+                        componentPropertySet.add(componentPropertyIterator
+                                .next().asResource());
+                    }
+                }
+                componentPropertySet.retainAll(dimensionSet);
+                dimensionMap.put(dataSet, componentPropertySet);
             }
         }
 
-        for (Resource key : dimensionMap.keySet()) {
-            System.out.println(key.toString() + ": " + dimensionMap.get(key).toString());
+        Map<Resource, Resource> obsValueNotExistMap = new HashMap<Resource, Resource>();
+        Set<Resource> duplicateObservationSet = new HashSet<Resource>();
+        for (Resource dataSet : dimensionMap.keySet()) {
+            Set<Resource> dimensions = dimensionMap.get(dataSet);
+            ResIterator observationIterator = model.listSubjectsWithProperty(QB_dataSet,
+                    dataSet);
+            Map<Resource, Set<Resource>> observationValueMap =
+                    new HashMap<Resource, Set<Resource>>();
+            while (observationIterator.hasNext()) {
+                Resource observation = observationIterator.nextResource();
+                Set<Resource> values = new HashSet<Resource>();
+                for (Resource dimension : dimensions) {
+                    Property dimAsProperty = ResourceFactory.createProperty(
+                            dimension.getURI());
+                    NodeIterator valueIterator = model.listObjectsOfProperty(observation,
+                            dimAsProperty);
+                    if (!valueIterator.hasNext()) obsValueNotExistMap.put(observation,
+                            dimension);
+                    else values.add(valueIterator.next().asResource());
+                }
+                if (observationValueMap.containsValue(values))
+                    duplicateObservationSet.add(observation);
+                else observationValueMap.put(observation, values);
+            }
+            datasetObservationValueMap.put(dataSet, observationValueMap);
         }
+        System.out.println(obsValueNotExistMap);
+        System.out.println(duplicateObservationSet);
     }
 
-    public void checkIC12() {
-        ResIterator resIterator = model.listResourcesWithProperty(RDF_type, QB_Observation);
-        while (resIterator.hasNext()) {
-            Resource subject = resIterator.nextResource();
-            model.listStatements(subject, QB_dataSet, (RDFNode) null);
-        }
-    }
+
 }
