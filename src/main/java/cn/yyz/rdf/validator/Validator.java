@@ -4,9 +4,6 @@ import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.*;
 import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
-
-import javax.swing.plaf.nimbus.State;
-import javax.xml.soap.Node;
 import java.io.InputStream;
 import java.util.*;
 
@@ -419,5 +416,56 @@ public class Validator {
         System.out.println(duplicateObservationSet);
     }
 
+    public void checkIC13() {
+        Map<Resource, Resource> obsAttributeWithoutValue =
+                new HashMap<Resource, Resource>();
+        Map<Resource, Set<Resource>> dataSetAttributeMap =
+                new HashMap<Resource, Set<Resource>>();
+        ResIterator dataSetIterator = model.listSubjectsWithProperty(
+                RDF_type, QB_DataSet);
+        while (dataSetIterator.hasNext()) {
+            Resource dataset = dataSetIterator.nextResource();
+            Set<Resource> componentSet = new HashSet<Resource>();
+            NodeIterator dsdIterator = model.listObjectsOfProperty(dataset, QB_structure);
+            while (dsdIterator.hasNext()) {
+                NodeIterator componentInDSDIterator = model.listObjectsOfProperty(
+                        dsdIterator.next().asResource(), QB_component);
+                while (componentInDSDIterator.hasNext()) {
+                    componentSet.add(componentInDSDIterator.next().asResource());
+                }
+            }
 
+            ResIterator componentRequiredIterator = model.listSubjectsWithProperty(
+                    QB_componentRequired, LITERAL_TRUE);
+            componentSet.retainAll(componentRequiredIterator.toSet());
+            if (!componentSet.isEmpty()) {
+                Set<Resource> attributeSet = new HashSet<Resource>();
+                for (Resource component : componentSet) {
+                    NodeIterator attributeIterator = model.listObjectsOfProperty(
+                            component, QB_componentProperty);
+                    while (attributeIterator.hasNext()) {
+                        attributeSet.add(attributeIterator.next().asResource());
+                    }
+                }
+                dataSetAttributeMap.put(dataset, attributeSet);
+            }
+        }
+        for (Resource dataset : dataSetAttributeMap.keySet()) {
+            Set<Resource> attributeSet = dataSetAttributeMap.get(dataset);
+            ResIterator observationIterator = model.listSubjectsWithProperty(
+                    QB_dataSet, dataset);
+            while (observationIterator.hasNext()) {
+                Resource obeservation = observationIterator.nextResource();
+                for (Resource attribute : attributeSet) {
+                    Property attributeAsProperty = ResourceFactory.createProperty(
+                            attribute.getURI());
+                    NodeIterator valueIterator = model.listObjectsOfProperty(obeservation,
+                            attributeAsProperty);
+                    if (!valueIterator.hasNext()) obsAttributeWithoutValue.put(
+                            obeservation, attribute);
+                }
+            }
+        }
+        System.out.println(obsAttributeWithoutValue);
+    }
 }

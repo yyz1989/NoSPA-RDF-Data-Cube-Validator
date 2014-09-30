@@ -131,7 +131,8 @@ public enum IntegrityConstraint {
     ),
 
     IC12(
-                    "ASK {\n" +
+                    "SELECT ?obs1 ?obs2 " +
+                    "WHERE {\n" +
                     "  FILTER( ?allEqual )\n" +
                     "  {\n" +
                     "    # For each pair of observations test if all the dimension values are the same\n" +
@@ -150,7 +151,8 @@ public enum IntegrityConstraint {
     ),
 
     IC13(
-                    "ASK {\n" +
+                    "SELECT ?obs ?attr " +
+                    "WHERE {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component ?component .\n" +
                     "    ?component qb:componentRequired \"true\"^^xsd:boolean ;\n" +
                     "               qb:componentProperty ?attr .\n" +

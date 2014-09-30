@@ -8,9 +8,9 @@ public class Main {
         Validator validator = new Validator("largeTest.ttl", "TTL");
         validator.normalize();
         long t1 = System.currentTimeMillis();
-        validator.checkConstraint("IC11");
+        validator.checkConstraint("IC13");
         long t2 = System.currentTimeMillis();
-        validator.checkIC11_12();
+        validator.checkIC13();
         long t3 = System.currentTimeMillis();
         System.out.println(t2 - t1);
         System.out.println(t3 - t2);
