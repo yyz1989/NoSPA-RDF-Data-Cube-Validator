@@ -9,8 +9,9 @@ The constraint check IC-12, "No duplicate observations", is the most time-consum
 
 An initial benchmark shows a dramatic improvement as expected:
 
-Test file: a data cube containing 13970 observations
-Time consumption for validating IC-12:
-Validation by SPARQL queries with Virtuoso: 1 hour 22 min
-Validation by SPARQL queries with Jena Parser: 58 min
-Validation by nesting Jena model search functions (this tool): 39 sec
+Test file: a data cube containing 13970 observations  
+Time consumption for validating IC-12:  
+
+Validation by SPARQL queries with Virtuoso: 1 hour 22 min  
+Validation by SPARQL queries with Jena Parser: 58 min  
+Validation by nesting Jena model search functions (this tool): 39 sec  
