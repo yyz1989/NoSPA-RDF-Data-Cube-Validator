@@ -122,7 +122,8 @@ public enum IntegrityConstraint {
     ),
 
     IC11(
-                    "ASK {\n" +
+                    "SELECT ?obs ?dim " +
+                    "WHERE {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty;\n" +
                     "    FILTER NOT EXISTS { ?obs ?dim [] }\n" +
