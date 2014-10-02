@@ -208,6 +208,18 @@ public class Validator {
 
     }
 
+    public void checkIC3_2() {
+        ResIterator dsdIterator = model.listSubjectsWithProperty(RDF_type,
+                QB_DataStructureDefinition);
+        while (dsdIterator.hasNext()) {
+            Resource dsd = dsdIterator.nextResource();
+            Property[] properties = {QB_component, QB_componentProperty, RDF_type};
+            Map<Resource, Set<Resource>> dsdPropertyMap = searchByStatement(dsd,
+                    Arrays.asList(properties), QB_MeasureProperty);
+            if (dsdPropertyMap.get(dsd).isEmpty()) System.out.println(dsd);
+        }
+    }
+
     public void checkIC4() {
         ResIterator dimensionIterator = model.listSubjectsWithProperty(RDF_type,
                 QB_DimensionProperty);
@@ -467,5 +479,129 @@ public class Validator {
             }
         }
         System.out.println(obsAttributeWithoutValue);
+    }
+
+    public void checkIC13_2() {
+        Map<Resource, Resource> obsAttributeWithoutValue =
+                new HashMap<Resource, Resource>();
+        Map<Resource, Set<Resource>> dataSetAttributeMap =
+                new HashMap<Resource, Set<Resource>>();
+        ResIterator dataSetIterator = model.listSubjectsWithProperty(
+                RDF_type, QB_DataSet);
+        while (dataSetIterator.hasNext()) {
+            Resource dataset = dataSetIterator.nextResource();
+            Property[] properties = {QB_structure, QB_component};
+            Map<Resource, Set<Resource>> componentMap = searchByStatement(dataset,
+                    Arrays.asList(properties), null);
+            Set<Resource> componentSet = componentMap.get(dataset);
+            ResIterator componentRequiredIterator = model.listSubjectsWithProperty(
+                    QB_componentRequired, LITERAL_TRUE);
+            componentSet.retainAll(componentRequiredIterator.toSet());
+            if (!componentSet.isEmpty()) {
+                Set<Resource> attributeSet = new HashSet<Resource>();
+                for (Resource component : componentSet) {
+                    NodeIterator attributeIterator = model.listObjectsOfProperty(
+                            component, QB_componentProperty);
+                    while (attributeIterator.hasNext()) {
+                        attributeSet.add(attributeIterator.next().asResource());
+                    }
+                }
+                dataSetAttributeMap.put(dataset, attributeSet);
+            }
+        }
+
+        for (Resource dataset : dataSetAttributeMap.keySet()) {
+            Set<Resource> attributeSet = dataSetAttributeMap.get(dataset);
+            ResIterator observationIterator = model.listSubjectsWithProperty(
+                    QB_dataSet, dataset);
+            while (observationIterator.hasNext()) {
+                Resource obeservation = observationIterator.nextResource();
+                for (Resource attribute : attributeSet) {
+                    Property attributeAsProperty = ResourceFactory.createProperty(
+                            attribute.getURI());
+                    NodeIterator valueIterator = model.listObjectsOfProperty(obeservation,
+                            attributeAsProperty);
+                    if (!valueIterator.hasNext()) obsAttributeWithoutValue.put(
+                            obeservation, attribute);
+                }
+            }
+        }
+        System.out.println(obsAttributeWithoutValue);
+    }
+
+    private Map<Resource, Set<Resource>> searchByStatement(
+            Resource subject, List<Property> properties, Resource object) {
+        Map<Resource, Set<Resource>> resultSet = new HashMap<Resource, Set<Resource>>();
+        if (properties.size() == 0) return resultSet;
+
+        // case: eg:obs1 qb:dataSet ?dataset
+        if (subject != null) {
+            NodeIterator objectIterator = model.listObjectsOfProperty(subject,
+                    properties.get(0));
+            Set<Resource> nodeSet = new HashSet<Resource>();
+            while (objectIterator.hasNext()) {
+                nodeSet.add(objectIterator.next().asResource());
+            }
+            for (int index = 1; index < properties.size(); index++) {
+                nodeSet = searchObjectsOfProperty(nodeSet, properties.get(index));
+            }
+            if (object != null) nodeSet.retainAll(Collections.singleton(object));
+            resultSet.put(subject, nodeSet);
+        }
+
+        // case: ?obs qb:dataSet eg:dataset1
+        else if (subject == null && object !=null) {
+            ResIterator subjectIterator = model.listSubjectsWithProperty(properties.get(0),
+                    object);
+            Set<Resource> nodeSet = subjectIterator.toSet();
+            for (int index = 1; index < properties.size(); index++) {
+                nodeSet = searchSubjectsWithProperty(nodeSet, properties.get(index));
+            }
+            resultSet.put(object, nodeSet);
+        }
+
+        // case: ?obs qb:dataSet ?dataset
+        else if (subject == null && object == null) {
+            ResIterator subjectIterator = model.listSubjectsWithProperty(properties.get(0));
+            for (Resource sub : subjectIterator.toSet()) {
+                NodeIterator objectIterator = model.listObjectsOfProperty(sub,
+                        properties.get(0));
+                Set<Resource> nodeSet = new HashSet<Resource>();
+                while (objectIterator.hasNext()) {
+                    nodeSet.add(objectIterator.next().asResource());
+                }
+                for (int index = 1; index < properties.size(); index++) {
+                    nodeSet = searchObjectsOfProperty(nodeSet, properties.get(index));
+                }
+                resultSet.put(sub, nodeSet);
+            }
+        }
+        return resultSet;
+    }
+
+    private Set<Resource> searchObjectsOfProperty(Set<Resource> subjects,
+                                                  Property property) {
+        Set<Resource> objects = new HashSet<Resource>();
+        for (Resource subject : subjects) {
+            NodeIterator objectIterator = model.listObjectsOfProperty(subject, property);
+            while (objectIterator.hasNext()) {
+                objects.add(objectIterator.next().asResource());
+            }
+        }
+        return objects;
+    }
+
+    private Set<Resource> searchSubjectsWithProperty(Set<Resource> objects,
+                                                     Property property) {
+        Set<Resource> subjects = new HashSet<Resource>();
+        for (Resource object : objects) {
+            ResIterator subjectIterator = model.listSubjectsWithProperty(property, object);
+            if (subjectIterator.hasNext()) subjects.addAll(subjectIterator.toSet());
+        }
+        return subjects;
+    }
+
+    public void precomputeCubeStructure() {
+
     }
 }
