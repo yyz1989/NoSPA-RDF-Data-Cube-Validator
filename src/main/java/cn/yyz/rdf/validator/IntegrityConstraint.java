@@ -161,7 +161,8 @@ public enum IntegrityConstraint {
     ),
 
     IC14(
-                    "ASK {\n" +
+                    "SELECT ?obs ?measure " +
+                    "WHERE {\n" +
                     "    # Observation in a non-measureType cube\n" +
                     "    ?obs qb:dataSet/qb:structure ?dsd .\n" +
                     "    FILTER NOT EXISTS { ?dsd qb:component/qb:componentProperty qb:measureType }\n" +
@@ -174,7 +175,8 @@ public enum IntegrityConstraint {
     ),
 
     IC15(
-                    "ASK {\n" +
+                    "SELECT ?obs ?measure " +
+                    "WHERE {\n" +
                     "    # Observation in a measureType-cube\n" +
                     "    ?obs qb:dataSet/qb:structure ?dsd ;\n" +
                     "         qb:measureType ?measure .\n" +
