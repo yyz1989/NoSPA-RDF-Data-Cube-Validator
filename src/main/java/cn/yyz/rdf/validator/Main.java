@@ -6,11 +6,11 @@ package cn.yyz.rdf.validator;
 public class Main {
     public static void main(String[] args) {
         Validator validator = new Validator("test.ttl", "TTL");
-        //validator.normalize();
+        validator.normalize();
         long t1 = System.currentTimeMillis();
-        validator.checkIC3_2();
+        validator.checkConstraint("IC15");
         long t2 = System.currentTimeMillis();
-        validator.checkIC3();
+        validator.checkIC15();
         long t3 = System.currentTimeMillis();
         System.out.println(t2 - t1);
         System.out.println(t3 - t2);

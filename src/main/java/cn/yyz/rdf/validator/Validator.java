@@ -48,6 +48,8 @@ public class Validator {
             PREFIX_CUBE + "MeasureProperty");
     private static final Property QB_measure = ResourceFactory.createProperty(
             PREFIX_CUBE + "measure");
+    private static final Property QB_measureType = ResourceFactory.createProperty(
+            PREFIX_CUBE + "measureType");
     private static final Property QB_AttributeProperty = ResourceFactory.createProperty(
             PREFIX_CUBE + "AttributeProperty");
     private static final Property QB_attribute = ResourceFactory.createProperty(
@@ -230,6 +232,16 @@ public class Validator {
                 System.out.println(dimension);
             }
         }
+    }
+
+    public void checkIC4_2() {
+        ResIterator dimensionIterator = model.listSubjectsWithProperty(RDF_type,
+                QB_DimensionProperty);
+        ResIterator dimensionWithRangeIterator = model.listSubjectsWithProperty(
+                RDFS_range);
+        Set<Resource> dimensionWithoutRange = dimensionIterator.toSet();
+        dimensionWithoutRange.retainAll(dimensionWithRangeIterator.toSet());
+        System.out.println(dimensionWithoutRange);
     }
 
     public void checkIC5() {
@@ -527,6 +539,65 @@ public class Validator {
             }
         }
         System.out.println(obsAttributeWithoutValue);
+    }
+
+    public void checkIC14() {
+        Map<Resource, Resource> obsWithoutMeasureValue = new HashMap<Resource, Resource>();
+        ResIterator datasetIterator = model.listSubjectsWithProperty(RDF_type, QB_DataSet);
+        ResIterator measureIterator = model.listSubjectsWithProperty(RDF_type, QB_MeasureProperty);
+        Property[] properties = {QB_structure, QB_component, QB_componentProperty};
+        Map<Resource, Set<Resource>> measureTypeDataset = searchByStatement(null,
+                Arrays.asList(properties), QB_measureType);
+        Set<Resource> dataSetWithoutMeasure = datasetIterator.toSet();
+        dataSetWithoutMeasure.removeAll(measureTypeDataset.get(QB_measureType));
+
+        for (Resource dataSet : dataSetWithoutMeasure) {
+            Map<Resource, Set<Resource>> dataSetMeasure = searchByStatement(dataSet,
+                    Arrays.asList(properties), null);
+            Set<Resource> measureSet = measureIterator.toSet();
+            measureSet.retainAll(dataSetMeasure.get(dataSet));
+            Set<Property> measureAsPropertySet = new HashSet<Property>();
+            for (Resource measure : measureSet) {
+                measureAsPropertySet.add(ResourceFactory.createProperty(measure.getURI()));
+            }
+            ResIterator observationIterator = model.listSubjectsWithProperty(QB_dataSet, dataSet);
+            while (observationIterator.hasNext()) {
+                Resource observation = observationIterator.nextResource();
+                for (Property measure : measureAsPropertySet) {
+                    NodeIterator measureValueIterator = model.listObjectsOfProperty(observation,
+                            measure);
+                    if (!measureValueIterator.hasNext()) obsWithoutMeasureValue.put(observation,
+                            measure);
+                }
+            }
+        }
+        System.out.println(obsWithoutMeasureValue);
+    }
+
+    public void checkIC15() {
+        Map<Resource, Resource> obsWithoutMeasureValue = new HashMap<Resource, Resource>();
+        ResIterator datasetDefIterator = model.listSubjectsWithProperty(RDF_type, QB_DataSet);
+        Property[] properties = {QB_structure, QB_component, QB_componentProperty};
+        Map<Resource, Set<Resource>> measureTypeDataset = searchByStatement(null,
+                Arrays.asList(properties), QB_measureType);
+        Set<Resource> dataSetWithMeasure = datasetDefIterator.toSet();
+        dataSetWithMeasure.retainAll(measureTypeDataset.get(QB_measureType));
+        for (Resource dataSet : dataSetWithMeasure) {
+            ResIterator observationIterator = model.listSubjectsWithProperty(QB_dataSet, dataSet);
+            while (observationIterator.hasNext()) {
+                Resource observation = observationIterator.nextResource();
+                NodeIterator measureIterator = model.listObjectsOfProperty(observation,
+                        QB_measureType);
+                while (measureIterator.hasNext()) {
+                    Resource measure = measureIterator.next().asResource();
+                    NodeIterator measureValueIterator = model.listObjectsOfProperty(
+                            observation, ResourceFactory.createProperty(measure.getURI()));
+                    if (!measureValueIterator.hasNext()) obsWithoutMeasureValue.put(observation,
+                            measure);
+                }
+            }
+        }
+        System.out.println(obsWithoutMeasureValue);
     }
 
     private Map<Resource, Set<Resource>> searchByStatement(
