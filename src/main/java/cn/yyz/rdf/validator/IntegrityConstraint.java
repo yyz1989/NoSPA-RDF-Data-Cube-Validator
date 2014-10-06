@@ -238,33 +238,31 @@ public enum IntegrityConstraint {
     ),
 
     IC18(
-                    "ASK {\n" +
+                    "SELECT ?obs ?dataset " +
+                    "WHERE {\n" +
                     "    ?dataset qb:slice       ?slice .\n" +
                     "    ?slice   qb:observation ?obs .\n" +
                     "    FILTER NOT EXISTS { ?obs qb:dataSet ?dataset . }\n" +
                     "}"
     ),
 
-    IC19_ConceptScheme(
-                    "ASK {\n" +
+    IC19(
+                    "SELECT ?obs ?dim " +
+                    "WHERE {{\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
                     "        qb:codeList ?list .\n" +
                     "    ?list a skos:ConceptScheme .\n" +
                     "    ?obs ?dim ?v .\n" +
                     "    FILTER NOT EXISTS { ?v a skos:Concept ; skos:inScheme ?list }\n" +
-                    "}"
-    ),
-
-    IC19_Collection(
-                    "ASK {\n" +
+                    "} UNION {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
                     "        qb:codeList ?list .\n" +
                     "    ?list a skos:Collection .\n" +
                     "    ?obs ?dim ?v .\n" +
                     "    FILTER NOT EXISTS { ?v a skos:Concept . ?list skos:member+ ?v }\n" +
-                    "}"
+                    "}}"
     ),
 
     IC20_1(
