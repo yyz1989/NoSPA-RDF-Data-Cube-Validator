@@ -11,76 +11,6 @@ import java.util.*;
  * Created by yyz on 9/26/14.
  */
 public class Validator {
-    private static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";
-    private static final String PREFIX_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-    private static final String PREFIX_RDFS = "http://www.w3.org/2000/01/rdf-schema#";
-    private static final String PREFIX_SKOS = "http://www.w3.org/2004/02/skos/core#";
-
-    private static final Property RDF_type = ResourceFactory.createProperty(
-            PREFIX_RDF + "type");
-    private static final Property QB_observation = ResourceFactory.createProperty(
-            PREFIX_CUBE + "observation");
-    private static final Property QB_Observation = ResourceFactory.createProperty(
-            PREFIX_CUBE + "Observation");
-    private static final Property QB_dataSet = ResourceFactory.createProperty(
-            PREFIX_CUBE + "dataSet");
-    private static final Property QB_DataSet = ResourceFactory.createProperty(
-            PREFIX_CUBE + "DataSet");
-    private static final Property QB_slice = ResourceFactory.createProperty(
-            PREFIX_CUBE + "slice");
-    private static final Property QB_Slice = ResourceFactory.createProperty(
-            PREFIX_CUBE + "Slice");
-    private static final Property QB_sliceKey = ResourceFactory.createProperty(
-            PREFIX_CUBE + "sliceKey");
-    private static final Property QB_SliceKey = ResourceFactory.createProperty(
-            PREFIX_CUBE + "SliceKey");
-    private static final Property QB_sliceStructure = ResourceFactory.createProperty(
-            PREFIX_CUBE + "sliceStructure");
-    private static final Property QB_component = ResourceFactory.createProperty(
-            PREFIX_CUBE + "component");
-    private static final Property QB_componentProperty = ResourceFactory.createProperty(
-            PREFIX_CUBE + "componentProperty");
-    private static final Property QB_DimensionProperty = ResourceFactory.createProperty(
-            PREFIX_CUBE + "DimensionProperty");
-    private static final Property QB_dimension = ResourceFactory.createProperty(
-            PREFIX_CUBE + "dimension");
-    private static final Property QB_MeasureProperty = ResourceFactory.createProperty(
-            PREFIX_CUBE + "MeasureProperty");
-    private static final Property QB_measure = ResourceFactory.createProperty(
-            PREFIX_CUBE + "measure");
-    private static final Property QB_measureType = ResourceFactory.createProperty(
-            PREFIX_CUBE + "measureType");
-    private static final Property QB_AttributeProperty = ResourceFactory.createProperty(
-            PREFIX_CUBE + "AttributeProperty");
-    private static final Property QB_attribute = ResourceFactory.createProperty(
-            PREFIX_CUBE + "attribute");
-    private static final Property QB_componentAttachment = ResourceFactory.createProperty(
-            PREFIX_CUBE + "componentAttachment");
-    private static final Property QB_componentRequired = ResourceFactory.createProperty(
-            PREFIX_CUBE + "componentRequired");
-    private static final Property QB_structure = ResourceFactory.createProperty(
-            PREFIX_CUBE + "structure");
-    private static final Property QB_DataStructureDefinition =
-            ResourceFactory.createProperty(PREFIX_CUBE + "DataStructureDefinition");
-    private static final Property QB_codeList = ResourceFactory.createProperty(
-            PREFIX_CUBE + "codeList");
-    private static final Property RDFS_range = ResourceFactory.createProperty(
-            PREFIX_RDFS + "range");
-    private static final Property SKOS_Concept = ResourceFactory.createProperty(
-            PREFIX_SKOS + "Concept");
-    private static final Property SKOS_ConceptScheme = ResourceFactory.createProperty(
-            PREFIX_SKOS + "ConceptScheme");
-    private static final Property SKOS_inScheme = ResourceFactory.createProperty(
-            PREFIX_SKOS + "inScheme");
-    private static final Property SKOS_Collection = ResourceFactory.createProperty(
-            PREFIX_SKOS + "Collection");
-    private static final Property SKOS_member = ResourceFactory.createProperty(
-            PREFIX_SKOS + "member");
-    private static final Literal LITERAL_FALSE = ResourceFactory.createTypedLiteral(
-            Boolean.FALSE);
-    private static final Literal LITERAL_TRUE = ResourceFactory.createTypedLiteral(
-            Boolean.TRUE);
-
     private Model model;
     private Map<Resource, Set<Resource>> dimensionMap =
             new HashMap<Resource, Set<Resource>>();
@@ -696,6 +626,10 @@ public class Validator {
         System.out.println(dimensionByObservation);
     }
 
+    public void checkIC20() {
+        
+    }
+
     private Map<Resource, Set<Resource>> searchByStatement(
             Resource subject, List<Property> properties, Resource object) {
         Map<Resource, Set<Resource>> resultSet = new HashMap<Resource, Set<Resource>>();
@@ -771,4 +705,74 @@ public class Validator {
     public void precomputeCubeStructure() {
 
     }
+
+    private static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";
+    private static final String PREFIX_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    private static final String PREFIX_RDFS = "http://www.w3.org/2000/01/rdf-schema#";
+    private static final String PREFIX_SKOS = "http://www.w3.org/2004/02/skos/core#";
+
+    private static final Property RDF_type = ResourceFactory.createProperty(
+            PREFIX_RDF + "type");
+    private static final Property QB_observation = ResourceFactory.createProperty(
+            PREFIX_CUBE + "observation");
+    private static final Property QB_Observation = ResourceFactory.createProperty(
+            PREFIX_CUBE + "Observation");
+    private static final Property QB_dataSet = ResourceFactory.createProperty(
+            PREFIX_CUBE + "dataSet");
+    private static final Property QB_DataSet = ResourceFactory.createProperty(
+            PREFIX_CUBE + "DataSet");
+    private static final Property QB_slice = ResourceFactory.createProperty(
+            PREFIX_CUBE + "slice");
+    private static final Property QB_Slice = ResourceFactory.createProperty(
+            PREFIX_CUBE + "Slice");
+    private static final Property QB_sliceKey = ResourceFactory.createProperty(
+            PREFIX_CUBE + "sliceKey");
+    private static final Property QB_SliceKey = ResourceFactory.createProperty(
+            PREFIX_CUBE + "SliceKey");
+    private static final Property QB_sliceStructure = ResourceFactory.createProperty(
+            PREFIX_CUBE + "sliceStructure");
+    private static final Property QB_component = ResourceFactory.createProperty(
+            PREFIX_CUBE + "component");
+    private static final Property QB_componentProperty = ResourceFactory.createProperty(
+            PREFIX_CUBE + "componentProperty");
+    private static final Property QB_DimensionProperty = ResourceFactory.createProperty(
+            PREFIX_CUBE + "DimensionProperty");
+    private static final Property QB_dimension = ResourceFactory.createProperty(
+            PREFIX_CUBE + "dimension");
+    private static final Property QB_MeasureProperty = ResourceFactory.createProperty(
+            PREFIX_CUBE + "MeasureProperty");
+    private static final Property QB_measure = ResourceFactory.createProperty(
+            PREFIX_CUBE + "measure");
+    private static final Property QB_measureType = ResourceFactory.createProperty(
+            PREFIX_CUBE + "measureType");
+    private static final Property QB_AttributeProperty = ResourceFactory.createProperty(
+            PREFIX_CUBE + "AttributeProperty");
+    private static final Property QB_attribute = ResourceFactory.createProperty(
+            PREFIX_CUBE + "attribute");
+    private static final Property QB_componentAttachment = ResourceFactory.createProperty(
+            PREFIX_CUBE + "componentAttachment");
+    private static final Property QB_componentRequired = ResourceFactory.createProperty(
+            PREFIX_CUBE + "componentRequired");
+    private static final Property QB_structure = ResourceFactory.createProperty(
+            PREFIX_CUBE + "structure");
+    private static final Property QB_DataStructureDefinition =
+            ResourceFactory.createProperty(PREFIX_CUBE + "DataStructureDefinition");
+    private static final Property QB_codeList = ResourceFactory.createProperty(
+            PREFIX_CUBE + "codeList");
+    private static final Property RDFS_range = ResourceFactory.createProperty(
+            PREFIX_RDFS + "range");
+    private static final Property SKOS_Concept = ResourceFactory.createProperty(
+            PREFIX_SKOS + "Concept");
+    private static final Property SKOS_ConceptScheme = ResourceFactory.createProperty(
+            PREFIX_SKOS + "ConceptScheme");
+    private static final Property SKOS_inScheme = ResourceFactory.createProperty(
+            PREFIX_SKOS + "inScheme");
+    private static final Property SKOS_Collection = ResourceFactory.createProperty(
+            PREFIX_SKOS + "Collection");
+    private static final Property SKOS_member = ResourceFactory.createProperty(
+            PREFIX_SKOS + "member");
+    private static final Literal LITERAL_FALSE = ResourceFactory.createTypedLiteral(
+            Boolean.FALSE);
+    private static final Literal LITERAL_TRUE = ResourceFactory.createTypedLiteral(
+            Boolean.TRUE);
 }
