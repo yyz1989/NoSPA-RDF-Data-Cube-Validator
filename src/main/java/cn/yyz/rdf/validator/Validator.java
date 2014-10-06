@@ -627,7 +627,72 @@ public class Validator {
     }
 
     public void checkIC20() {
-        
+        Map<Resource, Resource> dimensionByObservation = new HashMap<Resource, Resource>();
+        Map<Property, Resource> codelistByDimension = new HashMap<Property, Resource>();
+        Set<Property> propertySet = new HashSet<Property>();
+        ResIterator hierarchyTypeDef = model.listSubjectsWithProperty(RDF_type,
+                QB_HierarchicalCodeList);
+        while (hierarchyTypeDef.hasNext()) {
+            NodeIterator hierarchyPropertyIterator = model.listObjectsOfProperty(
+                    hierarchyTypeDef.nextResource(), QB_parentChildProperty);
+            while (hierarchyPropertyIterator.hasNext()) {
+                RDFNode property = hierarchyPropertyIterator.next().asResource();
+                if (property.isURIResource()) propertySet.add(
+                        ResourceFactory.createProperty(property.asResource().getURI()));
+            }
+        }
+
+        Set<Resource> hierarchicalCodelistSet = model.listSubjectsWithProperty(RDF_type,
+                QB_HierarchicalCodeList).toSet();
+        ResIterator datasetDefIterator = model.listSubjectsWithProperty(RDF_type, QB_DataSet);
+        Property[] properties = {QB_structure, QB_component, QB_componentProperty};
+        Map<Resource, Set<Resource>> dimensionByDataset = searchByStatement(null,
+                Arrays.asList(properties), null);
+        for (Resource dataset : dimensionByDataset.keySet()) {
+            Set<Resource> dimensionSet = dimensionByDataset.get(dataset);
+            for (Resource dimension : dimensionSet) {
+                Property dimAsProperty = ResourceFactory.createProperty(dimension.getURI());
+                StmtIterator dimDefIterator = model.listStatements(dimension, RDF_type,
+                        QB_DimensionProperty);
+                NodeIterator dimHasCodelistIterator = model.listObjectsOfProperty(dimension,
+                        QB_codeList);
+                if (dimDefIterator.hasNext() && dimHasCodelistIterator.hasNext()) {
+                    Resource codelist = dimHasCodelistIterator.next().asResource();
+                    if (hierarchicalCodelistSet.contains(codelist))
+                        codelistByDimension.put(dimAsProperty, codelist);
+                }
+            }
+
+            Set<Resource> observationSet = model.listSubjectsWithProperty(QB_dataSet,
+                    dataset).toSet();
+            for (Resource observation : observationSet) {
+                for (Property dimension : codelistByDimension.keySet()) {
+                    NodeIterator dimValue = model.listObjectsOfProperty(observation,
+                            dimension);
+                    if (dimValue.hasNext()) {
+                        boolean valueInCodelist = false;
+                        for (Property hierarchyProp : propertySet) {
+                            NodeIterator hierarchyRoot = model.listObjectsOfProperty(
+                                    codelistByDimension.get(dimension), QB_hierarchyRoot);
+                            while (hierarchyRoot.hasNext()) {
+                                Resource codelistRoot = hierarchyRoot.next().asResource();
+                                if (codelistRoot.equals(dimValue)) {
+                                    valueInCodelist = true;
+                                    break;
+                                }
+                                else hierarchyRoot = model.listObjectsOfProperty(
+                                        codelistRoot, hierarchyProp);
+                            }
+                            if (valueInCodelist) break;
+                        }
+                        if (valueInCodelist) {
+                            dimensionByObservation.put(observation, dimension.asResource());
+                        }
+                    }
+                }
+            }
+        }
+        System.out.println(dimensionByObservation);
     }
 
     private Map<Resource, Set<Resource>> searchByStatement(
@@ -759,6 +824,12 @@ public class Validator {
             ResourceFactory.createProperty(PREFIX_CUBE + "DataStructureDefinition");
     private static final Property QB_codeList = ResourceFactory.createProperty(
             PREFIX_CUBE + "codeList");
+    private static final Property QB_HierarchicalCodeList = ResourceFactory.createProperty(
+            PREFIX_CUBE + "HierarchicalCodeList");
+    private static final Property QB_hierarchyRoot = ResourceFactory.createProperty(
+            PREFIX_CUBE + "hierarchyRoot");
+    private static final Property QB_parentChildProperty = ResourceFactory.createProperty(
+            PREFIX_CUBE + "parentChildProperty");
     private static final Property RDFS_range = ResourceFactory.createProperty(
             PREFIX_RDFS + "range");
     private static final Property SKOS_Concept = ResourceFactory.createProperty(
