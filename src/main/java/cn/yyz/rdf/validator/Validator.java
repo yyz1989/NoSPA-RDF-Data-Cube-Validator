@@ -12,10 +12,11 @@ import java.util.*;
  */
 public class Validator {
     private Model model;
-    private Map<Resource, Set<Resource>> dimensionMap =
+    private Map<Resource, Set<Resource>> dimensionByDataset =
             new HashMap<Resource, Set<Resource>>();
-    private Map<Resource, Map<Resource, Set<Resource>>> datasetObservationValueMap =
+    private Map<Resource, Map<Resource, Set<Resource>>> valueByDatasetAndDim =
             new HashMap<Resource, Map<Resource, Set<Resource>>>();
+    private Map<Resource, Set<Resource>> dsdByDataset = new HashMap<Resource, Set<Resource>>();
 
     public Validator(String filename, String format) {
         model = ModelFactory.createDefaultModel();
@@ -75,6 +76,20 @@ public class Validator {
 
     }
 
+    public void precomputeCubeStructure() {
+        Map<Property, Resource> objByProp = new HashMap<Property, Resource>();
+        objByProp.put(RDF_type, QB_DataSet);
+        List<Property> propertySet = Collections.singletonList(QB_structure);
+        Map<Resource, Map<Property, Set<Resource>>> dsdByDatasetAndStructure =
+                searchByChildProperty(null, objByProp, propertySet);
+        for (Resource dataset : dsdByDatasetAndStructure.keySet()) {
+            Map<Property, Set<Resource>> dsdByStructure =
+                    dsdByDatasetAndStructure.get(dataset);
+            Set<Resource> dsdSet = dsdByStructure.get(QB_structure);
+            if (dsdSet != null) dsdByDataset.put(dataset, dsdSet);
+        }
+    }
+
     public void checkConstraint(String constraint) {
         checkConstraint(IntegrityConstraint.valueOf(constraint));
     }
@@ -96,31 +111,29 @@ public class Validator {
     }
 
     public void checkIC1() {
+        Map<Resource, Set<Resource>> datasetByObservation =
+                new HashMap<Resource, Set<Resource>>();
         ResIterator observationIterator = model.listSubjectsWithProperty(
                 RDF_type, QB_Observation);
         while (observationIterator.hasNext()) {
             Resource observation = observationIterator.nextResource();
-            NodeIterator datasetIterator = model.listObjectsOfProperty(
-                    observation, QB_dataSet);
-            Set datasetSet = datasetIterator.toSet();
+            Set<Resource> datasetSet = searchObjectsOfProperty(
+                    Collections.singleton(observation), QB_dataSet);
             if (datasetSet.size() != 1) {
-                System.out.println(observation + ": " + datasetSet);
+                datasetByObservation.put(observation, datasetSet);
             }
         }
-
+        System.out.println(datasetByObservation);
     }
 
     public void checkIC2() {
-        ResIterator datasetIterator = model.listSubjectsWithProperty(
-                RDF_type, QB_DataSet);
-        while (datasetIterator.hasNext()) {
-            Resource dataset = datasetIterator.nextResource();
-            NodeIterator dsdIterator = model.listObjectsOfProperty(dataset, QB_structure);
-            Set dsdSet = dsdIterator.toSet();
-            if (dsdSet.size() != 1) {
-                System.out.println(dataset + ": " + dsdSet);
-            }
+        Map<Resource, Set<Resource>> nonUniqueDsdByDataset =
+                new HashMap<Resource, Set<Resource>>();
+        for (Resource dataset : dsdByDataset.keySet()) {
+            Set<Resource> dsdSet = dsdByDataset.get(dataset);
+            if (dsdSet.size() != 1) nonUniqueDsdByDataset.put(dataset, dsdSet);
         }
+        System.out.println(nonUniqueDsdByDataset);
     }
 
     public void checkIC3() {
@@ -327,7 +340,7 @@ public class Validator {
         ResIterator datasetIterator = model.listResourcesWithProperty(RDF_type, QB_DataSet);
         while (datasetIterator.hasNext()) {
             Resource dataset = datasetIterator.nextResource();
-            dimensionMap.put(dataset, new HashSet<Resource>());
+            dimensionByDataset.put(dataset, new HashSet<Resource>());
             NodeIterator dsdIterator = model.listObjectsOfProperty(dataset, QB_structure);
             while (dsdIterator.hasNext()) {
                 Resource dsd = dsdIterator.next().asResource();
@@ -344,14 +357,14 @@ public class Validator {
                     }
                 }
                 componentPropertySet.retainAll(dimensionSet);
-                dimensionMap.put(dataset, componentPropertySet);
+                dimensionByDataset.put(dataset, componentPropertySet);
             }
         }
 
         Map<Resource, Resource> obsValueNotExistMap = new HashMap<Resource, Resource>();
         Set<Resource> duplicateObservationSet = new HashSet<Resource>();
-        for (Resource dataset : dimensionMap.keySet()) {
-            Set<Resource> dimensions = dimensionMap.get(dataset);
+        for (Resource dataset : dimensionByDataset.keySet()) {
+            Set<Resource> dimensions = dimensionByDataset.get(dataset);
             ResIterator observationIterator = model.listSubjectsWithProperty(QB_dataSet,
                     dataset);
             Map<Resource, Set<Resource>> observationValueMap =
@@ -372,7 +385,7 @@ public class Validator {
                     duplicateObservationSet.add(observation);
                 else observationValueMap.put(observation, values);
             }
-            datasetObservationValueMap.put(dataset, observationValueMap);
+            valueByDatasetAndDim.put(dataset, observationValueMap);
         }
         System.out.println(obsValueNotExistMap);
         System.out.println(duplicateObservationSet);
@@ -809,10 +822,6 @@ public class Validator {
             if (subjectIterator.hasNext()) subjects.addAll(subjectIterator.toSet());
         }
         return subjects;
-    }
-
-    public void precomputeCubeStructure() {
-
     }
 
     private static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";
