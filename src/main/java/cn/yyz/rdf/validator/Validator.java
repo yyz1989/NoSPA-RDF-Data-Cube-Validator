@@ -711,22 +711,21 @@ public class Validator {
         System.out.println(dimensionByObservation);
     }
 
-    public void checkIC21() {
-        Map<Resource, Resource> dimensionByObservation = new HashMap<Resource, Resource>();
-        Map<Property, Resource> codelistByDimension = new HashMap<Property, Resource>();
+    public void checkIC20_21() {
         Map<Property, Resource> objByPropParams = Collections.singletonMap(
                 RDF_type, QB_HierarchicalCodeList.asResource());
         List<Property> propOnlyParams = Collections.singletonList(QB_codeList);
         Map<Resource, Map<Property, Set<Resource>>> childpropByCodelistAndProp =
                 searchByChildProperty(null, objByPropParams, propOnlyParams);
-        Set<Resource> childPropSet = new HashSet<Resource>();
+        Set<Resource> propInDefSet = new HashSet<Resource>();
+        Set<Resource> propSet = new HashSet<Resource>();
         Set<Resource> inversePropSet = new HashSet<Resource>();
         for (Resource codelist : childpropByCodelistAndProp.keySet()) {
             Map<Property, Set<Resource>> childPropByProp =
                     childpropByCodelistAndProp.get(codelist);
-            childPropSet.addAll(childPropByProp.get(QB_parentChildProperty));
+            propInDefSet.addAll(childPropByProp.get(QB_parentChildProperty));
         }
-        for (Resource childProp : childPropSet) {
+        for (Resource childProp : propInDefSet) {
             if (childProp.isAnon()) {
                 NodeIterator inversePropIterator = model.listObjectsOfProperty(childProp,
                         OWL_inverseOf);
@@ -735,7 +734,17 @@ public class Validator {
                     if (inverseProp.isURIResource()) inversePropSet.add(inverseProp);
                 }
             }
+            else if (childProp.isURIResource()) propSet.add(childProp);
         }
+
+        Set<Resource> hierarchicalCodelistSet = model.listSubjectsWithProperty(RDF_type,
+                QB_HierarchicalCodeList).toSet();
+
+
+        ResIterator datasetDefIterator = model.listSubjectsWithProperty(RDF_type, QB_DataSet);
+        Property[] properties = {QB_structure, QB_component, QB_componentProperty};
+        Map<Resource, Set<Resource>> dimensionByDataset = searchByPathVisit(null,
+                Arrays.asList(properties), null);
     }
 
     private Map<Resource, Set<Resource>> searchByPathVisit(
@@ -788,10 +797,9 @@ public class Validator {
         return resultSet;
     }
 
-    private Map<Resource, Map<Property, Set<Resource>>> searchByChildProperty(Resource subject,
-           Map<Property, Resource> objectByProperty, List<Property> propertyOnlyList) {
-        Map<Resource, Map<Property, Set<Resource>>> resultSet =
-                new HashMap<Resource, Map<Property, Set<Resource>>>();
+    private Set<Resource> searchByChildProperty(Resource subject,
+                                                Map<Property, Resource> objectByProperty) {
+        Set<Resource> resultSet = new HashSet<Resource>();
         for (Property property : objectByProperty.keySet()) {
             if (objectByProperty.get(property) == null) objectByProperty.remove(property);
         }
@@ -805,27 +813,29 @@ public class Validator {
             subjectSet.retainAll(subjectIterator.toSet());
         }
 
-        if (subject != null && !subjectSet.contains(subject)) return resultSet;
+        if (subject != null) {
+            if (subjectSet.contains(subject)) return Collections.singleton(subject);
+            else return resultSet;
+        }
+        else return subjectSet;
+    }
 
-        if (propertyOnlyList.size() == 0) {
-            for (Resource resultSubject : subjectSet) {
-                resultSet.put(resultSubject, null);
+    private Map<Resource, Map<Property, Set<Resource>>> searchByChildProperty(Resource subject,
+           Map<Property, Resource> objectByProperty, List<Property> propertyOnlyList) {
+        Map<Resource, Map<Property, Set<Resource>>> resultSet =
+                new HashMap<Resource, Map<Property, Set<Resource>>>();
+        Set<Resource> subjectSet = searchByChildProperty(subject, objectByProperty);
+        for (Resource resultSubject : subjectSet) {
+            Map<Property, Set<Resource>> objectSetByProperty =
+                    new HashMap<Property, Set<Resource>>();
+            for (Property property : propertyOnlyList) {
+                Set<Resource> objectSet = searchObjectsOfProperty(
+                        Collections.singleton(resultSubject), property);
+                objectSetByProperty.put(property, objectSet);
             }
-            return resultSet;
+            resultSet.put(resultSubject, objectSetByProperty);
         }
-        else {
-            for (Resource resultSubject : subjectSet) {
-                Map<Property, Set<Resource>> objectSetByProperty =
-                        new HashMap<Property, Set<Resource>>();
-                for (Property property : propertyOnlyList) {
-                    Set<Resource> objectSet = searchObjectsOfProperty(
-                            Collections.singleton(resultSubject), property);
-                    objectSetByProperty.put(property, objectSet);
-                }
-                resultSet.put(resultSubject, objectSetByProperty);
-            }
-            return resultSet;
-        }
+        return resultSet;
     }
 
     private Set<Resource> searchObjectsOfProperty(Set<Resource> subjects,
