@@ -652,7 +652,7 @@ public class Validator {
             NodeIterator hierarchyPropertyIterator = model.listObjectsOfProperty(
                     hierarchyTypeDef.nextResource(), QB_parentChildProperty);
             while (hierarchyPropertyIterator.hasNext()) {
-                RDFNode property = hierarchyPropertyIterator.next().asResource();
+                RDFNode property = hierarchyPropertyIterator.next();
                 if (property.isURIResource()) propertySet.add(
                         ResourceFactory.createProperty(property.asResource().getURI()));
             }
@@ -712,7 +712,30 @@ public class Validator {
     }
 
     public void checkIC21() {
-
+        Map<Resource, Resource> dimensionByObservation = new HashMap<Resource, Resource>();
+        Map<Property, Resource> codelistByDimension = new HashMap<Property, Resource>();
+        Map<Property, Resource> objByPropParams = Collections.singletonMap(
+                RDF_type, QB_HierarchicalCodeList.asResource());
+        List<Property> propOnlyParams = Collections.singletonList(QB_codeList);
+        Map<Resource, Map<Property, Set<Resource>>> childpropByCodelistAndProp =
+                searchByChildProperty(null, objByPropParams, propOnlyParams);
+        Set<Resource> childPropSet = new HashSet<Resource>();
+        Set<Resource> inversePropSet = new HashSet<Resource>();
+        for (Resource codelist : childpropByCodelistAndProp.keySet()) {
+            Map<Property, Set<Resource>> childPropByProp =
+                    childpropByCodelistAndProp.get(codelist);
+            childPropSet.addAll(childPropByProp.get(QB_parentChildProperty));
+        }
+        for (Resource childProp : childPropSet) {
+            if (childProp.isAnon()) {
+                NodeIterator inversePropIterator = model.listObjectsOfProperty(childProp,
+                        OWL_inverseOf);
+                while (inversePropIterator.hasNext()) {
+                    Resource inverseProp = inversePropIterator.next().asResource();
+                    if (inverseProp.isURIResource()) inversePropSet.add(inverseProp);
+                }
+            }
+        }
     }
 
     private Map<Resource, Set<Resource>> searchByPathVisit(
@@ -831,6 +854,7 @@ public class Validator {
     private static final String PREFIX_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     private static final String PREFIX_RDFS = "http://www.w3.org/2000/01/rdf-schema#";
     private static final String PREFIX_SKOS = "http://www.w3.org/2004/02/skos/core#";
+    private static final String PREFIX_OWL = "http://www.w3.org/2002/07/owl#";
 
     private static final Property RDF_type = ResourceFactory.createProperty(
             PREFIX_RDF + "type");
@@ -898,6 +922,8 @@ public class Validator {
             PREFIX_SKOS + "Collection");
     private static final Property SKOS_member = ResourceFactory.createProperty(
             PREFIX_SKOS + "member");
+    private static final Property OWL_inverseOf = ResourceFactory.createProperty(
+            PREFIX_SKOS + "inverseOf");
     private static final Literal LITERAL_FALSE = ResourceFactory.createTypedLiteral(
             Boolean.FALSE);
     private static final Literal LITERAL_TRUE = ResourceFactory.createTypedLiteral(
