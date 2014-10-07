@@ -127,13 +127,16 @@ public class Validator {
     }
 
     public void checkIC2() {
-        Map<Resource, Set<Resource>> nonUniqueDsdByDataset =
-                new HashMap<Resource, Set<Resource>>();
-        for (Resource dataset : dsdByDataset.keySet()) {
-            Set<Resource> dsdSet = dsdByDataset.get(dataset);
-            if (dsdSet.size() != 1) nonUniqueDsdByDataset.put(dataset, dsdSet);
+        ResIterator datasetIterator = model.listSubjectsWithProperty(
+            RDF_type, QB_DataSet);
+        while (datasetIterator.hasNext()) {
+            Resource dataset = datasetIterator.nextResource();
+            NodeIterator dsdIterator = model.listObjectsOfProperty(dataset, QB_structure);
+            Set dsdSet = dsdIterator.toSet();
+            if (dsdSet.size() != 1) {
+                System.out.println(dataset + ": " + dsdSet);
+            }
         }
-        System.out.println(nonUniqueDsdByDataset);
     }
 
     public void checkIC3() {
