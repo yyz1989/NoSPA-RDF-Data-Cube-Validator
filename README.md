@@ -2,6 +2,7 @@ RDF Data Cube Validator
 =======================
 
 ### Developing...
+### The code is not readable at the moment, I am trying to find a balance between more abstracted functions and performance
 
 The functions for the first 12 integrity constraints check are completed.
 
