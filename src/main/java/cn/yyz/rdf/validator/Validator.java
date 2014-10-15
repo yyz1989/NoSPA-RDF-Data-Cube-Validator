@@ -215,6 +215,19 @@ public class Validator {
         }
     }
 
+    public void checkIC5_2() {
+        Set<Resource> dimensionWithoutCodelist = new HashSet<Resource>();
+        Map<Property, Resource> objectByProperty = new HashMap<Property, Resource>();
+        objectByProperty.put(RDF_type, QB_DimensionProperty);
+        objectByProperty.put(RDFS_range, SKOS_Concept);
+        Set<Resource> dimensionSet = searchByChildProperty(null, objectByProperty);
+        for (Resource dimension : dimensionSet) {
+            NodeIterator codelistIterator = model.listObjectsOfProperty(dimension, QB_codeList);
+            if (!codelistIterator.hasNext()) dimensionWithoutCodelist.add(dimension);
+        }
+        System.out.println(dimensionWithoutCodelist);
+    }
+
     public void checkIC6() {
         ResIterator componentSpecIterator1 = model.listSubjectsWithProperty(
                 QB_componentRequired, LITERAL_FALSE);
@@ -245,6 +258,24 @@ public class Validator {
 
     }
 
+    public void checkIC6_2() {
+        Set<Resource> componentSet = new HashSet<Resource>();
+        Map<Property, Resource> objectByProperty = Collections.singletonMap(
+                QB_componentRequired, LITERAL_FALSE.asResource());
+        List<Property> propertyOnly = Collections.singletonList(QB_componentProperty);
+        NodeIterator componentSpecIterator = model.listObjectsOfProperty(QB_component);
+        while (componentSpecIterator.hasNext()) {
+            Resource componentSpec = componentSpecIterator.next().asResource();
+            Map<Resource, Map<Property, Set<Resource>>> valueBySubAndProp = searchByChildProperty(
+                    componentSpec, objectByProperty, propertyOnly);
+            componentSet.addAll(valueBySubAndProp.get(componentSpec).get(QB_componentProperty));
+        }
+        ResIterator componentDefIterator = model.listSubjectsWithProperty(
+                RDF_type, QB_AttributeProperty);
+        componentSet.retainAll(componentDefIterator.toSet());
+        System.out.println(componentSet);
+    }
+
     public void checkIC7() {
         ResIterator sliceKeyIterator = model.listSubjectsWithProperty(RDF_type,
                 QB_SliceKey);
@@ -264,6 +295,12 @@ public class Validator {
         Set<Resource> sliceKeyNotInDSDSet = sliceKeyIterator.toSet();
         sliceKeyNotInDSDSet.removeAll(sliceKeyInDSDResourceSet);
         System.out.println(sliceKeyNotInDSDSet);
+    }
+
+    public void checkIC7_2() {
+        Map<Property, Resource> objectByProperty =
+                Collections.singletonMap(RDF_type, QB_DataStructureDefinition.asResource());
+
     }
 
     public void checkIC8() {
@@ -712,14 +749,15 @@ public class Validator {
     }
 
     public void checkIC20_21() {
-        Map<Property, Resource> objByPropParams = Collections.singletonMap(
-                RDF_type, QB_HierarchicalCodeList.asResource());
+        Map<Resource, Resource> dimensionByObservation = new HashMap<Resource, Resource>();
+        Map<Property, Resource> objByPropParams = new HashMap<Property, Resource>();
+        objByPropParams.put(RDF_type, QB_HierarchicalCodeList.asResource());
         List<Property> propOnlyParams = Collections.singletonList(QB_codeList);
         Map<Resource, Map<Property, Set<Resource>>> childpropByCodelistAndProp =
                 searchByChildProperty(null, objByPropParams, propOnlyParams);
         Set<Resource> propInDefSet = new HashSet<Resource>();
-        Set<Resource> propSet = new HashSet<Resource>();
-        Set<Resource> inversePropSet = new HashSet<Resource>();
+        Set<Property> propSet = new HashSet<Property>();
+        Set<Property> inversePropSet = new HashSet<Property>();
         for (Resource codelist : childpropByCodelistAndProp.keySet()) {
             Map<Property, Set<Resource>> childPropByProp =
                     childpropByCodelistAndProp.get(codelist);
@@ -730,11 +768,13 @@ public class Validator {
                 NodeIterator inversePropIterator = model.listObjectsOfProperty(childProp,
                         OWL_inverseOf);
                 while (inversePropIterator.hasNext()) {
-                    Resource inverseProp = inversePropIterator.next().asResource();
+                    Property inverseProp = ResourceFactory.createProperty(
+                            inversePropIterator.next().asResource().getURI());
                     if (inverseProp.isURIResource()) inversePropSet.add(inverseProp);
                 }
             }
-            else if (childProp.isURIResource()) propSet.add(childProp);
+            else if (childProp.isURIResource()) propSet.add(
+                    ResourceFactory.createProperty(childProp.getURI()));
         }
 
         objByPropParams.clear();
@@ -750,23 +790,81 @@ public class Validator {
             }
         }
 
-        ResIterator datasetDefIterator = model.listSubjectsWithProperty(RDF_type, QB_DataSet);
         Property[] properties = {QB_structure, QB_component, QB_componentProperty};
         Map<Resource, Set<Resource>> dimensionByDataset = searchByPathVisit(null,
                 Arrays.asList(properties), null);
+        List<Property> fixPropList = Collections.singletonList(QB_hierarchyRoot);
         for (Resource dataset : dimensionByDataset.keySet()) {
             Set<Resource> observationSet = model.listSubjectsWithProperty(QB_dataSet,
                     dataset).toSet();
             Set<Resource> dimensionSet = dimensionByDataset.get(dataset);
             dimensionSet.retainAll(codelistByDimension.keySet());
             for (Resource dimension : dimensionSet) {
-                for (Resource observation :observationSet) {
-                    model.listObjectsOfProperty(observation,
-                            ResourceFactory.createProperty(dimension.getURI()));
-
+                Resource codelist = codelistByDimension.get(dimension);
+                Property dimAsProperty = ResourceFactory.createProperty(dimension.getURI());
+                for (Resource observation : observationSet) {
+                    NodeIterator dimValue = model.listObjectsOfProperty(observation,
+                            dimAsProperty);
+                    if (dimValue.hasNext()) {
+                        Resource value = dimValue.next().asResource();
+                        boolean isConnected = false;
+                        for (Property prop : propSet) {
+                            if (connectedByRepeatedProp(codelist, fixPropList, prop,
+                                    value, true)) {
+                                isConnected = true;
+                                break;
+                            }
+                        }
+                        if (isConnected) continue;
+                        for (Property invProp : inversePropSet) {
+                            if (connectedByRepeatedProp(codelist, fixPropList, invProp,
+                                    value, false)) {
+                                isConnected = true;
+                                break;
+                            }
+                        }
+                        if (!isConnected) dimensionByObservation.put(observation, dimension);
+                    }
                 }
             }
         }
+        System.out.println(dimensionByObservation);
+    }
+
+    private boolean connectedByRepeatedProp(Resource subject, List<Property> fixPropList,
+                                            Property variableProp, Resource object, boolean isDirect) {
+        boolean isConnected = false;
+        Map<Resource, Set<Resource>> objectSetBySubject = searchByPathVisit(subject,
+                fixPropList, null);
+        Set<Resource> objectSet = objectSetBySubject.get(subject);
+        for (Resource objectOfPropPath : objectSet) {
+            if (connectedByRepeatedProp(objectOfPropPath, variableProp, object, isDirect)) {
+                isConnected = true;
+                break;
+            }
+        }
+        return isConnected;
+    }
+
+    private boolean connectedByRepeatedProp(Resource subject, Property variableProp,
+                                            Resource object, boolean isDirect) {
+        if (isDirect) return connectedByRepeatedProp(subject, variableProp, object);
+        else return connectedByRepeatedProp(object, variableProp, subject);
+    }
+
+    private boolean connectedByRepeatedProp(Resource subject, Property variableProp,
+                                            Resource object) {
+        boolean isConnected = false;
+        Set<Resource> objectSet = searchObjectsOfProperty(Collections.singleton(subject),
+                variableProp);
+        while (!objectSet.isEmpty()) {
+            if (objectSet.contains(object)) {
+                isConnected = true;
+                break;
+            }
+            else objectSet = searchObjectsOfProperty(objectSet, variableProp);
+        }
+        return isConnected;
     }
 
     private Map<Resource, Set<Resource>> searchByPathVisit(
@@ -858,42 +956,6 @@ public class Validator {
             resultSet.put(resultSubject, objectSetByProperty);
         }
         return resultSet;
-    }
-
-    private boolean connectedByRepeatedProp(Resource subject, List<Property> fixPropList,
-            Property variableProp, Resource object, boolean isDirect) {
-        boolean isConnected = false;
-        Map<Resource, Set<Resource>> objectSetBySubject = searchByPathVisit(subject,
-                fixPropList, null);
-        Set<Resource> objectSet = objectSetBySubject.get(subject);
-        for (Resource objectOfPropPath : objectSet) {
-            if (connectedByRepeatedProp(objectOfPropPath, variableProp, object, isDirect)) {
-                isConnected = true;
-                break;
-            }
-        }
-        return isConnected;
-    }
-
-    private boolean connectedByRepeatedProp(Resource subject, Property variableProp,
-                                            Resource object, boolean isDirect) {
-        if (isDirect) return connectedByRepeatedProp(subject, variableProp, object);
-        else return connectedByRepeatedProp(object, variableProp, subject);
-    }
-
-    private boolean connectedByRepeatedProp(Resource subject, Property variableProp,
-                                            Resource object) {
-        boolean isConnected = false;
-        Set<Resource> objectSet = searchObjectsOfProperty(Collections.singleton(subject),
-                variableProp);
-        while (!objectSet.isEmpty()) {
-            if (objectSet.contains(object)) {
-                isConnected = true;
-                break;
-            }
-            else objectSet = searchObjectsOfProperty(objectSet, variableProp);
-        }
-        return isConnected;
     }
 
     private Set<Resource> searchObjectsOfProperty(Set<Resource> subjects,
