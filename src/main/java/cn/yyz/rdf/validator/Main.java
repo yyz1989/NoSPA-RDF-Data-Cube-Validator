@@ -10,7 +10,7 @@ public class Main {
         long t1 = System.currentTimeMillis();
         //validator.checkConstraint("IC19");
         long t2 = System.currentTimeMillis();
-        validator.checkIC20();
+        validator.checkIC20_21();
         long t3 = System.currentTimeMillis();
         System.out.println(t2 - t1);
         System.out.println(t3 - t2);
