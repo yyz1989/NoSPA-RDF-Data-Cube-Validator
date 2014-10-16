@@ -113,10 +113,10 @@ public class Validator {
     public void checkIC1() {
         Map<Resource, Set<Resource>> datasetByObservation =
                 new HashMap<Resource, Set<Resource>>();
-        ResIterator observationIterator = model.listSubjectsWithProperty(
+        ResIterator observationIter = model.listSubjectsWithProperty(
                 RDF_type, QB_Observation);
-        while (observationIterator.hasNext()) {
-            Resource observation = observationIterator.nextResource();
+        while (observationIter.hasNext()) {
+            Resource observation = observationIter.nextResource();
             Set<Resource> datasetSet = searchObjectsOfProperty(
                     Collections.singleton(observation), QB_dataSet);
             if (datasetSet.size() != 1) {
@@ -127,43 +127,22 @@ public class Validator {
     }
 
     public void checkIC2() {
-        ResIterator datasetIterator = model.listSubjectsWithProperty(
+        Map<Resource, Set<Resource>> dsdByDataset =
+                new HashMap<Resource, Set<Resource>>();
+        ResIterator datasetIter = model.listSubjectsWithProperty(
             RDF_type, QB_DataSet);
-        while (datasetIterator.hasNext()) {
-            Resource dataset = datasetIterator.nextResource();
+        while (datasetIter.hasNext()) {
+            Resource dataset = datasetIter.nextResource();
             Set dsdSet = model.listObjectsOfProperty(dataset, QB_structure).toSet();
             if (dsdSet.size() != 1) {
-                System.out.println(dataset + ": " + dsdSet);
+                dsdByDataset.put(dataset, dsdSet);
             }
         }
+        System.out.println(dsdByDataset);
     }
 
     public void checkIC3() {
-        ResIterator dsdIterator = model.listSubjectsWithProperty(RDF_type,
-                QB_DataStructureDefinition);
-        while (dsdIterator.hasNext()) {
-            Set<Resource> measureSet = new HashSet<Resource>();
-            Resource dsd = dsdIterator.nextResource();
-            NodeIterator componentIterator = model.listObjectsOfProperty(dsd, QB_component);
-            while (componentIterator.hasNext()) {
-                Resource component = componentIterator.next().asResource();
-                NodeIterator measureIterator = model.listObjectsOfProperty(
-                        component, QB_measure);
-                while (measureIterator.hasNext()) {
-                    Resource measure = measureIterator.next().asResource();
-                    StmtIterator measurePropertyIterator = model.listStatements(
-                            measure, RDF_type, QB_MeasureProperty);
-                    if (measurePropertyIterator.hasNext()) measureSet.add(measure);
-                }
-            }
-            if (measureSet.size() == 0) {
-                System.out.println(dsd);
-            }
-        }
-
-    }
-
-    public void checkIC3_2() {
+        Set<Resource> dsdWithoutMeasure = new HashSet<Resource>();
         ResIterator dsdIterator = model.listSubjectsWithProperty(RDF_type,
                 QB_DataStructureDefinition);
         while (dsdIterator.hasNext()) {
@@ -171,23 +150,12 @@ public class Validator {
             Property[] properties = {QB_component, QB_componentProperty, RDF_type};
             Map<Resource, Set<Resource>> dsdPropertyMap = searchByPathVisit(dsd,
                     Arrays.asList(properties), QB_MeasureProperty);
-            if (dsdPropertyMap.get(dsd).isEmpty()) System.out.println(dsd);
+            if (dsdPropertyMap.get(dsd).isEmpty()) dsdWithoutMeasure.add(dsd);
         }
+        System.out.println(dsdWithoutMeasure);
     }
 
     public void checkIC4() {
-        ResIterator dimensionIterator = model.listSubjectsWithProperty(RDF_type,
-                QB_DimensionProperty);
-        while (dimensionIterator.hasNext()) {
-            Resource dimension = dimensionIterator.nextResource();
-            NodeIterator rangeIterator = model.listObjectsOfProperty(dimension, RDFS_range);
-            if (rangeIterator.hasNext()) {
-                System.out.println(dimension);
-            }
-        }
-    }
-
-    public void checkIC4_2() {
         ResIterator dimensionIterator = model.listSubjectsWithProperty(RDF_type,
                 QB_DimensionProperty);
         ResIterator dimensionWithRangeIterator = model.listSubjectsWithProperty(
@@ -198,23 +166,6 @@ public class Validator {
     }
 
     public void checkIC5() {
-        ResIterator dimensionIterator1 = model.listSubjectsWithProperty(RDF_type,
-                QB_DimensionProperty);
-        ResIterator dimensionIterator2 = model.listSubjectsWithProperty(RDFS_range,
-                SKOS_Concept);
-        Set<Resource> dimesnsionSet = dimensionIterator1.toSet();
-        dimesnsionSet.retainAll(dimensionIterator2.toSet());
-
-        for(Resource dimension : dimesnsionSet) {
-            NodeIterator codeListIterator = model.listObjectsOfProperty(dimension,
-                    QB_codeList);
-            if (codeListIterator.hasNext()) {
-                System.out.println(dimension);
-            }
-        }
-    }
-
-    public void checkIC5_2() {
         Set<Resource> dimensionWithoutCodelist = new HashSet<Resource>();
         Map<Property, Resource> objectByProperty = new HashMap<Property, Resource>();
         objectByProperty.put(RDF_type, QB_DimensionProperty);
