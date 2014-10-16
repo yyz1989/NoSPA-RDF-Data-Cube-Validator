@@ -131,8 +131,7 @@ public class Validator {
             RDF_type, QB_DataSet);
         while (datasetIterator.hasNext()) {
             Resource dataset = datasetIterator.nextResource();
-            NodeIterator dsdIterator = model.listObjectsOfProperty(dataset, QB_structure);
-            Set dsdSet = dsdIterator.toSet();
+            Set dsdSet = model.listObjectsOfProperty(dataset, QB_structure).toSet();
             if (dsdSet.size() != 1) {
                 System.out.println(dataset + ": " + dsdSet);
             }
@@ -300,7 +299,15 @@ public class Validator {
     public void checkIC7_2() {
         Map<Property, Resource> objectByProperty =
                 Collections.singletonMap(RDF_type, QB_DataStructureDefinition.asResource());
-
+        List<Property> propertyOnly = Collections.singletonList(QB_sliceKey);
+        Map<Resource, Map<Property, Set<Resource>>> objBySubAndProp =
+                searchByChildProperty(null, objectByProperty, propertyOnly);
+        Set<Resource> sliceKeySet = model.listSubjectsWithProperty(RDF_type, QB_SliceKey).toSet();
+        for (Resource key : objBySubAndProp.keySet()) {
+            Set<Resource> objectSet = objBySubAndProp.get(key).get(QB_sliceKey);
+            sliceKeySet.retainAll(objectSet);
+        }
+        System.out.println(sliceKeySet);
     }
 
     public void checkIC8() {
@@ -334,6 +341,32 @@ public class Validator {
             }
         }
         System.out.println(componentPropertyNotInDSDSet);
+    }
+
+    public void checkIC8_2() {
+        Set<Resource> componentWithoutDSD = new HashSet<Resource>();
+        List<Property> dsdToProp = new ArrayList<Property>();
+        dsdToProp.add(QB_component);
+        dsdToProp.add(QB_componentProperty);
+        Map<Property, Resource> objByProp = Collections.singletonMap(
+                RDF_type, QB_SliceKey.asResource());
+        List<Property> compProp = Collections.singletonList(QB_componentProperty);
+        List<Property> sliceKeyProp = Collections.singletonList(QB_sliceKey);
+        Set<Resource> propSet = new HashSet<Resource>();
+        Map<Resource, Map<Property, Set<Resource>>> objBySubAndProp =
+                searchByChildProperty(null, objByProp, compProp);
+        Map<Resource, Set<Resource>> sliceKeyByDSD = searchByPathVisit(null, sliceKeyProp, null);
+        for (Resource dsd : sliceKeyByDSD.keySet()) {
+            Set<Resource> sliceKeySet = sliceKeyByDSD.get(dsd);
+            for (Resource sliceKey : sliceKeySet) {
+                propSet.addAll(objBySubAndProp.get(sliceKey).get(QB_componentProperty));
+            }
+            for (Resource property : propSet) {
+                if (!connectedByPropList(dsd, dsdToProp, property))
+                    componentWithoutDSD.add(property);
+            }
+        }
+        System.out.println(componentWithoutDSD);
     }
 
     public void checkIC9() {
@@ -829,6 +862,17 @@ public class Validator {
             }
         }
         System.out.println(dimensionByObservation);
+    }
+
+    private boolean connectedByPropList(Resource subject,
+                                        List<Property> fixPropList, Resource object) {
+        boolean isConnected = false;
+        Map<Resource, Set<Resource>> objectSetBySubject = searchByPathVisit(subject,
+                fixPropList, null);
+        if (objectSetBySubject.containsKey(subject)) {
+            if (objectSetBySubject.get(subject).contains(object)) isConnected = true;
+        }
+        return isConnected;
     }
 
     private boolean connectedByRepeatedProp(Resource subject, List<Property> fixPropList,
