@@ -16,7 +16,7 @@ public class Validator {
             new HashMap<Resource, Set<Resource>>();
     private Map<Resource, Map<Resource, Set<Resource>>> valueByDatasetAndDim =
             new HashMap<Resource, Map<Resource, Set<Resource>>>();
-    private Map<Resource, Set<Resource>> dsdByDataset = new HashMap<Resource, Set<Resource>>();
+    private Map<Resource, Set<RDFNode>> dsdByDataset = new HashMap<Resource, Set<RDFNode>>();
 
     public Validator(String filename, String format) {
         model = ModelFactory.createDefaultModel();
@@ -77,15 +77,15 @@ public class Validator {
     }
 
     public void precomputeCubeStructure() {
-        Map<Property, Resource> objByProp = new HashMap<Property, Resource>();
+        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_DataSet);
         List<Property> propertySet = Collections.singletonList(QB_structure);
-        Map<Resource, Map<Property, Set<Resource>>> dsdByDatasetAndStructure =
+        Map<Resource, Map<Property, Set<RDFNode>>> dsdByDatasetAndStructure =
                 searchByChildProperty(null, objByProp, propertySet);
         for (Resource dataset : dsdByDatasetAndStructure.keySet()) {
-            Map<Property, Set<Resource>> dsdByStructure =
+            Map<Property, Set<RDFNode>> dsdByStructure =
                     dsdByDatasetAndStructure.get(dataset);
-            Set<Resource> dsdSet = dsdByStructure.get(QB_structure);
+            Set<RDFNode> dsdSet = dsdByStructure.get(QB_structure);
             if (dsdSet != null) dsdByDataset.put(dataset, dsdSet);
         }
     }
@@ -111,13 +111,13 @@ public class Validator {
     }
 
     public void checkIC1() {
-        Map<Resource, Set<Resource>> datasetByObservation =
-                new HashMap<Resource, Set<Resource>>();
+        Map<Resource, Set<RDFNode>> datasetByObservation =
+                new HashMap<Resource, Set<RDFNode>>();
         ResIterator observationIter = model.listSubjectsWithProperty(
                 RDF_type, QB_Observation);
         while (observationIter.hasNext()) {
             Resource observation = observationIter.nextResource();
-            Set<Resource> datasetSet = searchObjectsOfProperty(
+            Set<RDFNode> datasetSet = searchObjectsOfProperty(
                     Collections.singleton(observation), QB_dataSet);
             if (datasetSet.size() != 1) {
                 datasetByObservation.put(observation, datasetSet);
@@ -148,7 +148,7 @@ public class Validator {
         while (dsdIterator.hasNext()) {
             Resource dsd = dsdIterator.nextResource();
             Property[] properties = {QB_component, QB_componentProperty, RDF_type};
-            Map<Resource, Set<Resource>> dsdPropertyMap = searchByPathVisit(dsd,
+            Map<Resource, Set<? extends RDFNode>> dsdPropertyMap = searchByPathVisit(dsd,
                     Arrays.asList(properties), QB_MeasureProperty);
             if (dsdPropertyMap.get(dsd).isEmpty()) dsdWithoutMeasure.add(dsd);
         }
@@ -167,7 +167,7 @@ public class Validator {
 
     public void checkIC5() {
         Set<Resource> dimensionWithoutCodelist = new HashSet<Resource>();
-        Map<Property, Resource> objectByProperty = new HashMap<Property, Resource>();
+        Map<Property, RDFNode> objectByProperty = new HashMap<Property, RDFNode>();
         objectByProperty.put(RDF_type, QB_DimensionProperty);
         objectByProperty.put(RDFS_range, SKOS_Concept);
         Set<Resource> dimensionSet = searchByChildProperty(null, objectByProperty);
@@ -209,14 +209,14 @@ public class Validator {
     }
 
     public void checkIC6_2() {
-        Set<Resource> componentSet = new HashSet<Resource>();
-        Map<Property, Resource> objectByProperty = Collections.singletonMap(
-                QB_componentRequired, LITERAL_FALSE.asResource());
+        Set<RDFNode> componentSet = new HashSet<RDFNode>();
+        Map<Property, RDFNode> objectByProperty = Collections.singletonMap(
+                QB_componentRequired, (RDFNode) LITERAL_FALSE);
         List<Property> propertyOnly = Collections.singletonList(QB_componentProperty);
         NodeIterator componentSpecIterator = model.listObjectsOfProperty(QB_component);
         while (componentSpecIterator.hasNext()) {
             Resource componentSpec = componentSpecIterator.next().asResource();
-            Map<Resource, Map<Property, Set<Resource>>> valueBySubAndProp = searchByChildProperty(
+            Map<Resource, Map<Property, Set<RDFNode>>> valueBySubAndProp = searchByChildProperty(
                     componentSpec, objectByProperty, propertyOnly);
             componentSet.addAll(valueBySubAndProp.get(componentSpec).get(QB_componentProperty));
         }
@@ -225,7 +225,7 @@ public class Validator {
         componentSet.retainAll(componentDefIterator.toSet());
         System.out.println(componentSet);
     }
-
+    /*
     public void checkIC7() {
         ResIterator sliceKeyIterator = model.listSubjectsWithProperty(RDF_type,
                 QB_SliceKey);
@@ -814,26 +814,29 @@ public class Validator {
         }
         System.out.println(dimensionByObservation);
     }
+    */
 
     private boolean connectedByPropList(Resource subject,
                                         List<Property> fixPropList, Resource object) {
         boolean isConnected = false;
-        Map<Resource, Set<Resource>> objectSetBySubject = searchByPathVisit(subject,
+        Map<Resource, Set<? extends RDFNode>> objSetBySub = searchByPathVisit(subject,
                 fixPropList, null);
-        if (objectSetBySubject.containsKey(subject)) {
-            if (objectSetBySubject.get(subject).contains(object)) isConnected = true;
+        if (objSetBySub.containsKey(subject)) {
+            if (objSetBySub.get(subject).contains(object)) isConnected = true;
         }
         return isConnected;
     }
 
     private boolean connectedByRepeatedProp(Resource subject, List<Property> fixPropList,
-                                            Property variableProp, Resource object, boolean isDirect) {
+                                            Property variableProp, Resource object,
+                                            boolean isDirect) {
         boolean isConnected = false;
-        Map<Resource, Set<Resource>> objectSetBySubject = searchByPathVisit(subject,
+        Map<Resource, Set<? extends RDFNode>> objSetBySub = searchByPathVisit(subject,
                 fixPropList, null);
-        Set<Resource> objectSet = objectSetBySubject.get(subject);
-        for (Resource objectOfPropPath : objectSet) {
-            if (connectedByRepeatedProp(objectOfPropPath, variableProp, object, isDirect)) {
+        Set<? extends RDFNode> objectSet = objSetBySub.get(subject);
+        for (RDFNode objOfPropPath : objectSet) {
+            if (connectedByRepeatedProp(objOfPropPath.asResource(),
+                    variableProp, object, isDirect)) {
                 isConnected = true;
                 break;
             }
@@ -842,69 +845,66 @@ public class Validator {
     }
 
     private boolean connectedByRepeatedProp(Resource subject, Property variableProp,
-                                            Resource object, boolean isDirect) {
+                                            RDFNode object, boolean isDirect) {
         if (isDirect) return connectedByRepeatedProp(subject, variableProp, object);
-        else return connectedByRepeatedProp(object, variableProp, subject);
+        else return connectedByRepeatedProp(object.asResource(), variableProp, subject);
     }
 
     private boolean connectedByRepeatedProp(Resource subject, Property variableProp,
-                                            Resource object) {
+                                            RDFNode object) {
         boolean isConnected = false;
-        Set<Resource> objectSet = searchObjectsOfProperty(Collections.singleton(subject),
+        Set<RDFNode> objectSet = searchObjectsOfProperty(Collections.singleton(subject),
                 variableProp);
         while (!objectSet.isEmpty()) {
             if (objectSet.contains(object)) {
                 isConnected = true;
                 break;
             }
-            else objectSet = searchObjectsOfProperty(objectSet, variableProp);
+            else objectSet = searchObjectsOfProperty(nodeToResource(objectSet), variableProp);
         }
         return isConnected;
     }
 
-    private Map<Resource, Set<Resource>> searchByPathVisit(
+    private Map<Resource, Set<? extends RDFNode>> searchByPathVisit(
             Resource subject, List<Property> properties, Resource object) {
-        Map<Resource, Set<Resource>> resultSet = new HashMap<Resource, Set<Resource>>();
+        Map<Resource, Set<? extends RDFNode>> resultSet =
+                new HashMap<Resource, Set<? extends RDFNode>>();
         if (properties.size() == 0) return resultSet;
+        Set<Resource> resourceSet = new HashSet<Resource>();
+        Set<RDFNode> nodeSet = new HashSet<RDFNode>();
 
         // case: eg:obs1 qb:dataSet ?dataset
         if (subject != null) {
-            NodeIterator objectIterator = model.listObjectsOfProperty(subject,
+            NodeIterator objectIter = model.listObjectsOfProperty(subject,
                     properties.get(0));
-            Set<Resource> nodeSet = new HashSet<Resource>();
-            while (objectIterator.hasNext()) {
-                nodeSet.add(objectIterator.next().asResource());
+            while (objectIter.hasNext()) {
+                resourceSet.add(objectIter.next().asResource());
             }
             for (int index = 1; index < properties.size(); index++) {
-                nodeSet = searchObjectsOfProperty(nodeSet, properties.get(index));
+                nodeSet = searchObjectsOfProperty(resourceSet, properties.get(index));
             }
             if (object != null) nodeSet.retainAll(Collections.singleton(object));
             resultSet.put(subject, nodeSet);
         }
 
         // case: ?obs qb:dataSet eg:dataset1
-        else if (subject == null && object !=null) {
-            ResIterator subjectIterator = model.listSubjectsWithProperty(properties.get(0),
+        else if (null == subject && object !=null) {
+            ResIterator subjectIter = model.listSubjectsWithProperty(properties.get(0),
                     object);
-            Set<Resource> nodeSet = subjectIterator.toSet();
+            resourceSet = subjectIter.toSet();
             for (int index = 1; index < properties.size(); index++) {
-                nodeSet = searchSubjectsWithProperty(nodeSet, properties.get(index));
+                resourceSet = searchSubjectsWithProperty(resourceSet, properties.get(index));
             }
-            resultSet.put(object, nodeSet);
+            resultSet.put(object, resourceSet);
         }
 
         // case: ?obs qb:dataSet ?dataset
         else if (subject == null && object == null) {
-            ResIterator subjectIterator = model.listSubjectsWithProperty(properties.get(0));
-            for (Resource sub : subjectIterator.toSet()) {
-                NodeIterator objectIterator = model.listObjectsOfProperty(sub,
-                        properties.get(0));
-                Set<Resource> nodeSet = new HashSet<Resource>();
-                while (objectIterator.hasNext()) {
-                    nodeSet.add(objectIterator.next().asResource());
-                }
+            ResIterator subjectIter = model.listSubjectsWithProperty(properties.get(0));
+            for (Resource sub : subjectIter.toSet()) {
+                nodeSet = searchObjectsOfProperty(Collections.singleton(sub), properties.get(0));
                 for (int index = 1; index < properties.size(); index++) {
-                    nodeSet = searchObjectsOfProperty(nodeSet, properties.get(index));
+                    nodeSet = searchObjectsOfProperty(nodeToResource(nodeSet), properties.get(index));
                 }
                 resultSet.put(sub, nodeSet);
             }
@@ -913,19 +913,19 @@ public class Validator {
     }
 
     private Set<Resource> searchByChildProperty(Resource subject,
-                                                Map<Property, Resource> objectByProperty) {
+                                                Map<Property, RDFNode> objectByProperty) {
         Set<Resource> resultSet = new HashSet<Resource>();
         for (Property property : objectByProperty.keySet()) {
             if (objectByProperty.get(property) == null) objectByProperty.remove(property);
         }
         if (objectByProperty.size() == 0) return resultSet;
         Property seedKey = objectByProperty.keySet().iterator().next();
-        Resource seedValue = objectByProperty.remove(seedKey);
+        RDFNode seedValue = objectByProperty.remove(seedKey);
         Set<Resource> subjectSet = model.listSubjectsWithProperty(seedKey, seedValue).toSet();
         for (Property property : objectByProperty.keySet()) {
-            Resource object = objectByProperty.get(property);
-            ResIterator subjectIterator = model.listSubjectsWithProperty(property, object);
-            subjectSet.retainAll(subjectIterator.toSet());
+            RDFNode object = objectByProperty.get(property);
+            ResIterator subjectIter = model.listSubjectsWithProperty(property, object);
+            subjectSet.retainAll(subjectIter.toSet());
         }
 
         if (subject != null) {
@@ -935,16 +935,16 @@ public class Validator {
         else return subjectSet;
     }
 
-    private Map<Resource, Map<Property, Set<Resource>>> searchByChildProperty(Resource subject,
-           Map<Property, Resource> objectByProperty, List<Property> propertyOnlyList) {
-        Map<Resource, Map<Property, Set<Resource>>> resultSet =
-                new HashMap<Resource, Map<Property, Set<Resource>>>();
+    private Map<Resource, Map<Property, Set<RDFNode>>> searchByChildProperty(Resource subject,
+           Map<Property, RDFNode> objectByProperty, List<Property> propertyOnlyList) {
+        Map<Resource, Map<Property, Set<RDFNode>>> resultSet =
+                new HashMap<Resource, Map<Property, Set<RDFNode>>>();
         Set<Resource> subjectSet = searchByChildProperty(subject, objectByProperty);
         for (Resource resultSubject : subjectSet) {
-            Map<Property, Set<Resource>> objectSetByProperty =
-                    new HashMap<Property, Set<Resource>>();
+            Map<Property, Set<RDFNode>> objectSetByProperty =
+                    new HashMap<Property, Set<RDFNode>>();
             for (Property property : propertyOnlyList) {
-                Set<Resource> objectSet = searchObjectsOfProperty(
+                Set<RDFNode> objectSet = searchObjectsOfProperty(
                         Collections.singleton(resultSubject), property);
                 objectSetByProperty.put(property, objectSet);
             }
@@ -953,26 +953,32 @@ public class Validator {
         return resultSet;
     }
 
-    private Set<Resource> searchObjectsOfProperty(Set<Resource> subjects,
+    private Set<RDFNode> searchObjectsOfProperty(Set<Resource> subjectSet,
                                                   Property property) {
-        Set<Resource> objects = new HashSet<Resource>();
-        for (Resource subject : subjects) {
-            NodeIterator objectIterator = model.listObjectsOfProperty(subject, property);
-            while (objectIterator.hasNext()) {
-                objects.add(objectIterator.next().asResource());
-            }
+        Set<RDFNode> objectSet = new HashSet<RDFNode>();
+        for (Resource subject : subjectSet) {
+            NodeIterator objectIter = model.listObjectsOfProperty(subject, property);
+            if (objectIter.hasNext()) objectSet.addAll(objectIter.toSet());
         }
-        return objects;
+        return objectSet;
     }
 
-    private Set<Resource> searchSubjectsWithProperty(Set<Resource> objects,
+    private Set<Resource> searchSubjectsWithProperty(Set<? extends RDFNode> objectSet,
                                                      Property property) {
-        Set<Resource> subjects = new HashSet<Resource>();
-        for (Resource object : objects) {
-            ResIterator subjectIterator = model.listSubjectsWithProperty(property, object);
-            if (subjectIterator.hasNext()) subjects.addAll(subjectIterator.toSet());
+        Set<Resource> subjectSet = new HashSet<Resource>();
+        for (RDFNode object : objectSet) {
+            ResIterator subjectIter = model.listSubjectsWithProperty(property, object);
+            if (subjectIter.hasNext()) subjectSet.addAll(subjectIter.toSet());
         }
-        return subjects;
+        return subjectSet;
+    }
+
+    private Set<Resource> nodeToResource(Set<RDFNode> nodeSet) {
+        Set<Resource> resourceSet = new HashSet<Resource>();
+        for (RDFNode node : nodeSet) {
+            if (node.isResource()) resourceSet.add(node.asResource());
+        }
+        return resourceSet;
     }
 
     private static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";
