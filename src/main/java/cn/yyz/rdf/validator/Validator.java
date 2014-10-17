@@ -179,88 +179,42 @@ public class Validator {
     }
 
     public void checkIC6() {
-        ResIterator componentSpecIterator1 = model.listSubjectsWithProperty(
-                QB_componentRequired, LITERAL_FALSE);
-        ResIterator componentSpecIterator2 = model.listSubjectsWithProperty(
-                QB_componentProperty, (RDFNode) null);
-        NodeIterator componentSpecIterator3 = model.listObjectsOfProperty(
-                QB_component);
-        Set<Resource> componentSpecSet = new HashSet<Resource>();
-        for (RDFNode node : componentSpecIterator3.toSet()) {
-            componentSpecSet.add(node.asResource());
-        }
-
-        componentSpecSet.retainAll(componentSpecIterator1.toSet());
-        componentSpecSet.retainAll(componentSpecIterator2.toSet());
-
-        for (Resource componentSpec : componentSpecSet) {
-            NodeIterator componentIterator = model.listObjectsOfProperty(
-                    componentSpec, QB_componentProperty);
-            while (componentIterator.hasNext()) {
-                Resource component = componentIterator.next().asResource();
-                StmtIterator componentStmtIterator = model.listStatements(
-                        component, RDF_type, QB_AttributeProperty);
-                if (componentIterator.hasNext()) {
-                    System.out.print(component);
-                }
+        Set<RDFNode> componentSet = new HashSet<RDFNode>();
+        Map<Property, RDFNode> objectByProperty = new HashMap<Property, RDFNode>();
+        objectByProperty.put(QB_componentRequired, LITERAL_FALSE);
+        List<Property> propertyOnly = Collections.singletonList(QB_componentProperty);
+        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp = searchByChildProperty(
+                null, objectByProperty, propertyOnly);
+        NodeIterator compSpecIter = model.listObjectsOfProperty(QB_component);
+        while (compSpecIter.hasNext()) {
+            RDFNode compSpecNode = compSpecIter.next();
+            if (compSpecNode.isResource()) {
+                Resource compSpecRes = compSpecNode.asResource();
+                if (objBySubAndProp.containsKey(compSpecRes))
+                    componentSet.addAll(objBySubAndProp
+                            .get(compSpecRes).get(QB_componentProperty));
             }
         }
-
-    }
-
-    public void checkIC6_2() {
-        Set<RDFNode> componentSet = new HashSet<RDFNode>();
-        Map<Property, RDFNode> objectByProperty = Collections.singletonMap(
-                QB_componentRequired, (RDFNode) LITERAL_FALSE);
-        List<Property> propertyOnly = Collections.singletonList(QB_componentProperty);
-        NodeIterator componentSpecIterator = model.listObjectsOfProperty(QB_component);
-        while (componentSpecIterator.hasNext()) {
-            Resource componentSpec = componentSpecIterator.next().asResource();
-            Map<Resource, Map<Property, Set<RDFNode>>> valueBySubAndProp = searchByChildProperty(
-                    componentSpec, objectByProperty, propertyOnly);
-            componentSet.addAll(valueBySubAndProp.get(componentSpec).get(QB_componentProperty));
-        }
-        ResIterator componentDefIterator = model.listSubjectsWithProperty(
+        ResIterator compDefIter = model.listSubjectsWithProperty(
                 RDF_type, QB_AttributeProperty);
-        componentSet.retainAll(componentDefIterator.toSet());
+        componentSet.retainAll(compDefIter.toSet());
         System.out.println(componentSet);
     }
-    /*
-    public void checkIC7() {
-        ResIterator sliceKeyIterator = model.listSubjectsWithProperty(RDF_type,
-                QB_SliceKey);
-        Set<RDFNode> sliceKeyInDSDNodeSet = new HashSet<RDFNode>();
-        ResIterator dsdIterator = model.listSubjectsWithProperty(RDF_type,
-                QB_DataStructureDefinition);
-        while (dsdIterator.hasNext()) {
-            Resource dsd = dsdIterator.nextResource();
-            NodeIterator sliceKeyInDSDIterator = model.listObjectsOfProperty(dsd,
-                    QB_sliceKey);
-            sliceKeyInDSDNodeSet.addAll(sliceKeyInDSDIterator.toList());
-        }
-        Set<Resource> sliceKeyInDSDResourceSet = new HashSet<Resource>();
-        for(RDFNode node : sliceKeyInDSDNodeSet) {
-            sliceKeyInDSDResourceSet.add(node.asResource());
-        }
-        Set<Resource> sliceKeyNotInDSDSet = sliceKeyIterator.toSet();
-        sliceKeyNotInDSDSet.removeAll(sliceKeyInDSDResourceSet);
-        System.out.println(sliceKeyNotInDSDSet);
-    }
 
-    public void checkIC7_2() {
-        Map<Property, Resource> objectByProperty =
-                Collections.singletonMap(RDF_type, QB_DataStructureDefinition.asResource());
+    public void checkIC7() {
+        Map<Property, RDFNode> objectByProperty = new HashMap<Property, RDFNode>();
+        objectByProperty.put(RDF_type, QB_DataStructureDefinition);
         List<Property> propertyOnly = Collections.singletonList(QB_sliceKey);
-        Map<Resource, Map<Property, Set<Resource>>> objBySubAndProp =
+        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
                 searchByChildProperty(null, objectByProperty, propertyOnly);
         Set<Resource> sliceKeySet = model.listSubjectsWithProperty(RDF_type, QB_SliceKey).toSet();
-        for (Resource key : objBySubAndProp.keySet()) {
-            Set<Resource> objectSet = objBySubAndProp.get(key).get(QB_sliceKey);
-            sliceKeySet.retainAll(objectSet);
+        for (Resource dsd : objBySubAndProp.keySet()) {
+            Set<RDFNode> objectSet = objBySubAndProp.get(dsd).get(QB_sliceKey);
+            sliceKeySet.removeAll(objectSet);
         }
         System.out.println(sliceKeySet);
     }
-
+/*
     public void checkIC8() {
         Set<Resource> componentPropertyNotInDSDSet = new HashSet<Resource>();
         StmtIterator sliceKeyInDSDIterator = model.listStatements(null, QB_sliceKey,
