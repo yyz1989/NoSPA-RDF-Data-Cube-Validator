@@ -383,33 +383,47 @@ public class Validator {
         }
         return obsWithoutMeasureVal;
     }
-/*
-    public void checkIC15() {
-        Map<Resource, Resource> obsWithoutMeasureValue = new HashMap<Resource, Resource>();
-        ResIterator datasetDefIterator = model.listSubjectsWithProperty(RDF_type, QB_DataSet);
-        Property[] properties = {QB_structure, QB_component, QB_componentProperty};
-        Map<Resource, Set<Resource>> measureTypeDataset = searchByPathVisit(null,
-                Arrays.asList(properties), QB_measureType);
-        Set<Resource> datasetWithMeasure = datasetDefIterator.toSet();
-        datasetWithMeasure.retainAll(measureTypeDataset.get(QB_measureType));
-        for (Resource dataset : datasetWithMeasure) {
-            ResIterator observationIterator = model.listSubjectsWithProperty(QB_dataSet, dataset);
-            while (observationIterator.hasNext()) {
-                Resource observation = observationIterator.nextResource();
-                NodeIterator measureIterator = model.listObjectsOfProperty(observation,
-                        QB_measureType);
-                while (measureIterator.hasNext()) {
-                    Resource measure = measureIterator.next().asResource();
-                    NodeIterator measureValueIterator = model.listObjectsOfProperty(
-                            observation, ResourceFactory.createProperty(measure.getURI()));
-                    if (!measureValueIterator.hasNext()) obsWithoutMeasureValue.put(observation,
-                            measure);
-                }
+
+    public void checkIC15_16() {
+        Map<Resource, Set<RDFNode>> obsWithFaultyMeasure = new HashMap<Resource, Set<RDFNode>>();
+        List<Property> propPath = Arrays.asList(QB_structure, QB_component,
+                QB_componentProperty);
+        Map<Resource, Set<? extends RDFNode>> compPropSetByDataset = searchByPathVisit(null,
+                propPath, null);
+        Set<Resource> measurePropSet = model.listSubjectsWithProperty(RDF_type,
+                ResourceFactory.createProperty(QB_MeasureProperty.getURI())).toSet();
+        for (Resource dataset : compPropSetByDataset.keySet()) {
+            Set<? extends RDFNode> compPropSet = compPropSetByDataset.get(dataset);
+            if (compPropSet.contains(QB_measureType)) {
+                compPropSet.retainAll(measurePropSet);
+                Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
+                obsWithFaultyMeasure.putAll(measureTypeValueCheck(obsSet, compPropSet));
             }
         }
-        System.out.println(obsWithoutMeasureValue);
+        System.out.println(obsWithFaultyMeasure);
     }
 
+    private Map<Resource, Set<RDFNode>> measureTypeValueCheck (Set<Resource> obsSet,
+                                                               Set<? extends RDFNode> measureSet) {
+        Map<Resource, Set<RDFNode>> obsWithFaultyMeasure = new HashMap<Resource, Set<RDFNode>>();
+        for (Resource obs : obsSet) {
+            Set<RDFNode> measurePropInObs = model.listObjectsOfProperty(obs,
+                    QB_measureType).toSet();
+            if (measurePropInObs.size() !=1) {
+                obsWithFaultyMeasure.put(obs, measurePropInObs);
+            }
+            else {
+                Property measureProp = ResourceFactory.createProperty(
+                        measurePropInObs.iterator().next().asResource().getURI());
+                Set<RDFNode> measurePropValSet =
+                        model.listObjectsOfProperty(obs, measureProp).toSet();
+                if (!measureSet.contains(measureProp) || measurePropValSet.size() != 1)
+                    obsWithFaultyMeasure.put(obs, measurePropInObs);
+            }
+        }
+        return obsWithFaultyMeasure;
+    }
+/*
     public void checkIC18() {
         Map<Resource, Resource> obsNotInDataset = new HashMap<Resource, Resource>();
         Property[] properties = {QB_slice, QB_observation};

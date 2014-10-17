@@ -9,7 +9,7 @@ public class Main {
         validator.normalize();
         long t1 = System.currentTimeMillis();
         //validator.checkConstraint("IC19");
-        validator.checkIC14();
+        validator.checkIC15_16();
         long t2 = System.currentTimeMillis();
         //validator.checkIC13_2();
         long t3 = System.currentTimeMillis();
