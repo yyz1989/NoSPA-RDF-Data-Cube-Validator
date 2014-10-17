@@ -286,7 +286,6 @@ public class Validator {
             obsByDataset.put(dataset,
                     model.listSubjectsWithProperty(QB_dataSet, dataset).toSet());
         }
-
         for (Resource dataset : obsByDataset.keySet()) {
             Set<Resource> obsSet = obsByDataset.get(dataset);
             Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
@@ -299,10 +298,7 @@ public class Validator {
                                                   Set<? extends RDFNode> dimSet) {
         Map<Resource, Set<RDFNode>> faultyObservation = new HashMap<Resource, Set<RDFNode>>();
         Map<Resource, Set<RDFNode>> valueSetByObs = new HashMap<Resource, Set<RDFNode>>();
-        Set<Property> dimAsPropSet = new HashSet<Property>();
-        for (RDFNode dim : dimSet) {
-            dimAsPropSet.add(ResourceFactory.createProperty(dim.asResource().getURI()));
-        }
+        Set<Property> dimAsPropSet = nodeToProperty(dimSet);
         for (Resource obs : obsSet) {
             Set<RDFNode> valueSet = new HashSet<RDFNode>();
             Set<RDFNode> dimWithoutValSet = new HashSet<RDFNode>();
@@ -321,140 +317,73 @@ public class Validator {
         return faultyObservation;
     }
 
-/*    public void checkIC13() {
-        Map<Resource, Resource> obsAttributeWithoutValue =
-                new HashMap<Resource, Resource>();
-        Map<Resource, Set<Resource>> datasetAttributeMap =
-                new HashMap<Resource, Set<Resource>>();
-        ResIterator datasetIterator = model.listSubjectsWithProperty(
-                RDF_type, QB_DataSet);
-        while (datasetIterator.hasNext()) {
-            Resource dataset = datasetIterator.nextResource();
-            Set<Resource> componentSet = new HashSet<Resource>();
-            NodeIterator dsdIterator = model.listObjectsOfProperty(dataset, QB_structure);
-            while (dsdIterator.hasNext()) {
-                NodeIterator componentInDSDIterator = model.listObjectsOfProperty(
-                        dsdIterator.next().asResource(), QB_component);
-                while (componentInDSDIterator.hasNext()) {
-                    componentSet.add(componentInDSDIterator.next().asResource());
-                }
+    public void checkIC13() {
+        Map<Resource, RDFNode> obsWithoutAttribVal = new HashMap<Resource, RDFNode>();
+        List<Property> propPath = Arrays.asList(QB_structure, QB_component);
+        Map<Resource, Set<? extends RDFNode>> compByDataset = searchByPathVisit(
+                null, propPath, null);
+        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
+        objByProp.put(QB_componentRequired, LITERAL_TRUE);
+        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp = searchByChildProperty(null,
+                objByProp, Collections.singletonList(QB_componentProperty));
+        for (Resource dataset : compByDataset.keySet()) {
+            Set<? extends RDFNode> compSet = compByDataset.get(dataset);
+            Set<RDFNode> attribSet = new HashSet<RDFNode>();
+            compSet.retainAll(objBySubAndProp.keySet());
+            for (RDFNode component : compSet) {
+                attribSet.addAll(objBySubAndProp.get(component.asResource())
+                        .get(QB_componentProperty));
             }
-
-            ResIterator componentRequiredIterator = model.listSubjectsWithProperty(
-                    QB_componentRequired, LITERAL_TRUE);
-            componentSet.retainAll(componentRequiredIterator.toSet());
-            if (!componentSet.isEmpty()) {
-                Set<Resource> attributeSet = new HashSet<Resource>();
-                for (Resource component : componentSet) {
-                    NodeIterator attributeIterator = model.listObjectsOfProperty(
-                            component, QB_componentProperty);
-                    while (attributeIterator.hasNext()) {
-                        attributeSet.add(attributeIterator.next().asResource());
-                    }
-                }
-                datasetAttributeMap.put(dataset, attributeSet);
-            }
+            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
+            obsWithoutAttribVal.putAll(attribValueCheck(obsSet, attribSet));
         }
-        for (Resource dataset : datasetAttributeMap.keySet()) {
-            Set<Resource> attributeSet = datasetAttributeMap.get(dataset);
-            ResIterator observationIterator = model.listSubjectsWithProperty(
-                    QB_dataSet, dataset);
-            while (observationIterator.hasNext()) {
-                Resource obeservation = observationIterator.nextResource();
-                for (Resource attribute : attributeSet) {
-                    Property attributeAsProperty = ResourceFactory.createProperty(
-                            attribute.getURI());
-                    NodeIterator valueIterator = model.listObjectsOfProperty(obeservation,
-                            attributeAsProperty);
-                    if (!valueIterator.hasNext()) obsAttributeWithoutValue.put(
-                            obeservation, attribute);
-                }
-            }
-        }
-        System.out.println(obsAttributeWithoutValue);
+        System.out.println(obsWithoutAttribVal);
     }
 
-    public void checkIC13_2() {
-        Map<Resource, Resource> obsAttributeWithoutValue =
-                new HashMap<Resource, Resource>();
-        Map<Resource, Set<Resource>> datasetAttributeMap =
-                new HashMap<Resource, Set<Resource>>();
-        ResIterator datasetIterator = model.listSubjectsWithProperty(
-                RDF_type, QB_DataSet);
-        while (datasetIterator.hasNext()) {
-            Resource dataset = datasetIterator.nextResource();
-            Property[] properties = {QB_structure, QB_component};
-            Map<Resource, Set<Resource>> componentMap = searchByPathVisit(dataset,
-                    Arrays.asList(properties), null);
-            Set<Resource> componentSet = componentMap.get(dataset);
-            ResIterator componentRequiredIterator = model.listSubjectsWithProperty(
-                    QB_componentRequired, LITERAL_TRUE);
-            componentSet.retainAll(componentRequiredIterator.toSet());
-            if (!componentSet.isEmpty()) {
-                Set<Resource> attributeSet = new HashSet<Resource>();
-                for (Resource component : componentSet) {
-                    NodeIterator attributeIterator = model.listObjectsOfProperty(
-                            component, QB_componentProperty);
-                    while (attributeIterator.hasNext()) {
-                        attributeSet.add(attributeIterator.next().asResource());
-                    }
-                }
-                datasetAttributeMap.put(dataset, attributeSet);
+    private Map<Resource, RDFNode> attribValueCheck (Set<Resource> obsSet,
+                                                     Set<RDFNode> attribSet) {
+        Map<Resource, RDFNode> obsWithoutAttribVal = new HashMap<Resource, RDFNode>();
+        Set<Property> attribAsPropSet = nodeToProperty(attribSet);
+        for (Resource obs : obsSet) {
+            for (Property attribProp : attribAsPropSet) {
+                if (!model.listObjectsOfProperty(obs, attribProp).hasNext())
+                    obsWithoutAttribVal.put(obs, attribProp);
             }
         }
-
-        for (Resource dataset : datasetAttributeMap.keySet()) {
-            Set<Resource> attributeSet = datasetAttributeMap.get(dataset);
-            ResIterator observationIterator = model.listSubjectsWithProperty(
-                    QB_dataSet, dataset);
-            while (observationIterator.hasNext()) {
-                Resource obeservation = observationIterator.nextResource();
-                for (Resource attribute : attributeSet) {
-                    Property attributeAsProperty = ResourceFactory.createProperty(
-                            attribute.getURI());
-                    NodeIterator valueIterator = model.listObjectsOfProperty(obeservation,
-                            attributeAsProperty);
-                    if (!valueIterator.hasNext()) obsAttributeWithoutValue.put(
-                            obeservation, attribute);
-                }
-            }
-        }
-        System.out.println(obsAttributeWithoutValue);
+        return obsWithoutAttribVal;
     }
 
     public void checkIC14() {
-        Map<Resource, Resource> obsWithoutMeasureValue = new HashMap<Resource, Resource>();
-        ResIterator datasetIterator = model.listSubjectsWithProperty(RDF_type, QB_DataSet);
-        ResIterator measureIterator = model.listSubjectsWithProperty(RDF_type, QB_MeasureProperty);
-        Property[] properties = {QB_structure, QB_component, QB_componentProperty};
-        Map<Resource, Set<Resource>> measureTypeDataset = searchByPathVisit(null,
-                Arrays.asList(properties), QB_measureType);
-        Set<Resource> datasetWithoutMeasure = datasetIterator.toSet();
-        datasetWithoutMeasure.removeAll(measureTypeDataset.get(QB_measureType));
-
-        for (Resource dataset : datasetWithoutMeasure) {
-            Map<Resource, Set<Resource>> datasetMeasure = searchByPathVisit(dataset,
-                    Arrays.asList(properties), null);
-            Set<Resource> measureSet = measureIterator.toSet();
-            measureSet.retainAll(datasetMeasure.get(dataset));
-            Set<Property> measureAsPropertySet = new HashSet<Property>();
-            for (Resource measure : measureSet) {
-                measureAsPropertySet.add(ResourceFactory.createProperty(measure.getURI()));
+        Map<Resource, RDFNode> obsWithoutMeasureVal = new HashMap<Resource, RDFNode>();
+        List<Property> propPath = Arrays.asList(QB_structure, QB_component, QB_componentProperty);
+        Map<Resource, Set<? extends RDFNode>> compPropSetByDataset = searchByPathVisit(null,
+                propPath, null);
+        Set<Resource> measureSet = model.listSubjectsWithProperty(RDF_type,
+                ResourceFactory.createProperty(QB_MeasureProperty.getURI())).toSet();
+        for (Resource dataset : compPropSetByDataset.keySet()) {
+            Set<? extends RDFNode> compPropSet = compPropSetByDataset.get(dataset);
+            if (!compPropSet.contains(QB_measureType)) {
+                compPropSet.retainAll(measureSet);
             }
-            ResIterator observationIterator = model.listSubjectsWithProperty(QB_dataSet, dataset);
-            while (observationIterator.hasNext()) {
-                Resource observation = observationIterator.nextResource();
-                for (Property measure : measureAsPropertySet) {
-                    NodeIterator measureValueIterator = model.listObjectsOfProperty(observation,
-                            measure);
-                    if (!measureValueIterator.hasNext()) obsWithoutMeasureValue.put(observation,
-                            measure);
-                }
-            }
+            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
+            obsWithoutMeasureVal.putAll(measureValueCheck(obsSet, compPropSet));
         }
-        System.out.println(obsWithoutMeasureValue);
+        System.out.println(obsWithoutMeasureVal);
     }
 
+    private Map<Resource, RDFNode> measureValueCheck (Set<Resource> obsSet,
+                                                      Set<? extends RDFNode> measureSet) {
+        Map<Resource, RDFNode> obsWithoutMeasureVal = new HashMap<Resource, RDFNode>();
+        Set<Property> measureAsPropSet = nodeToProperty(measureSet);
+        for (Resource obs : obsSet) {
+            for (Property measure : measureAsPropSet) {
+                if (!model.listObjectsOfProperty(obs, measure).hasNext())
+                    obsWithoutMeasureVal.put(obs, measure);
+            }
+        }
+        return obsWithoutMeasureVal;
+    }
+/*
     public void checkIC15() {
         Map<Resource, Resource> obsWithoutMeasureValue = new HashMap<Resource, Resource>();
         ResIterator datasetDefIterator = model.listSubjectsWithProperty(RDF_type, QB_DataSet);
@@ -879,12 +808,21 @@ public class Validator {
         return subjectSet;
     }
 
-    private Set<Resource> nodeToResource(Set<RDFNode> nodeSet) {
+    private Set<Resource> nodeToResource (Set<? extends RDFNode> nodeSet) {
         Set<Resource> resourceSet = new HashSet<Resource>();
         for (RDFNode node : nodeSet) {
             if (node.isResource()) resourceSet.add(node.asResource());
         }
         return resourceSet;
+    }
+
+    private Set<Property> nodeToProperty (Set<? extends RDFNode> nodeSet) {
+        Set<Property> propSet = new HashSet<Property>();
+        for (RDFNode node : nodeSet) {
+            if (node.isURIResource()) propSet.add(ResourceFactory.createProperty(
+                    node.asResource().getURI()));
+        }
+        return propSet;
     }
 
     private static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";

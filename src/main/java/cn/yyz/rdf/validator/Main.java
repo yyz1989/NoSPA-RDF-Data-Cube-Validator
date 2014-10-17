@@ -5,13 +5,13 @@ package cn.yyz.rdf.validator;
  */
 public class Main {
     public static void main(String[] args) {
-        Validator validator = new Validator("largeTest.ttl", "TTL");
+        Validator validator = new Validator("test.ttl", "TTL");
         validator.normalize();
         long t1 = System.currentTimeMillis();
         //validator.checkConstraint("IC19");
-        validator.checkIC11_12();
+        validator.checkIC14();
         long t2 = System.currentTimeMillis();
-        validator.checkIC11_12_2();
+        //validator.checkIC13_2();
         long t3 = System.currentTimeMillis();
         System.out.println(t2 - t1);
         System.out.println(t3 - t2);
