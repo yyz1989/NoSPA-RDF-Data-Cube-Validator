@@ -214,103 +214,60 @@ public class Validator {
         }
         System.out.println(sliceKeySet);
     }
-/*
-    public void checkIC8() {
-        Set<Resource> componentPropertyNotInDSDSet = new HashSet<Resource>();
-        StmtIterator sliceKeyInDSDIterator = model.listStatements(null, QB_sliceKey,
-                (RDFNode) null);
-        while (sliceKeyInDSDIterator.hasNext()) {
-            Statement statement = sliceKeyInDSDIterator.nextStatement();
-            Resource sliceKey = statement.getResource();
-            StmtIterator sliceKeyDefIterator = model.listStatements(sliceKey,
-                    RDF_type, QB_SliceKey);
-            if (sliceKeyDefIterator.hasNext()) {
-                NodeIterator componentPropertyIterator = model.listObjectsOfProperty(
-                        sliceKey, QB_componentProperty);
-                while (componentPropertyIterator.hasNext()) {
-                    RDFNode componentProperty = componentPropertyIterator.next();
-                    ResIterator componentPropertyDefIterator =
-                            model.listSubjectsWithProperty(QB_componentProperty,
-                                    componentProperty);
-                    NodeIterator componentDefIterator = model.listObjectsOfProperty(
-                            statement.getSubject(), QB_component);
-                    Set<Resource> componentSet = new HashSet<Resource>();
-                    while (componentDefIterator.hasNext()) {
-                        componentSet.add(componentDefIterator.next().asResource());
-                    }
-                    componentSet.retainAll(componentPropertyDefIterator.toSet());
-                    if (componentSet.isEmpty()) {
-                        componentPropertyNotInDSDSet.add(componentProperty.asResource());
-                    }
-                }
-            }
-        }
-        System.out.println(componentPropertyNotInDSDSet);
-    }
 
-    public void checkIC8_2() {
-        Set<Resource> componentWithoutDSD = new HashSet<Resource>();
-        List<Property> dsdToProp = new ArrayList<Property>();
-        dsdToProp.add(QB_component);
-        dsdToProp.add(QB_componentProperty);
-        Map<Property, Resource> objByProp = Collections.singletonMap(
-                RDF_type, QB_SliceKey.asResource());
+    public void checkIC8() {
+        Set<RDFNode> compWithoutDSD = new HashSet<RDFNode>();
+        List<Property> dsdToProp = Arrays.asList(QB_component, QB_componentProperty);
+        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
+        objByProp.put(RDF_type, QB_SliceKey);
         List<Property> compProp = Collections.singletonList(QB_componentProperty);
         List<Property> sliceKeyProp = Collections.singletonList(QB_sliceKey);
-        Set<Resource> propSet = new HashSet<Resource>();
-        Map<Resource, Map<Property, Set<Resource>>> objBySubAndProp =
+        Set<RDFNode> propSet = new HashSet<RDFNode>();
+        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
                 searchByChildProperty(null, objByProp, compProp);
-        Map<Resource, Set<Resource>> sliceKeyByDSD = searchByPathVisit(null, sliceKeyProp, null);
+        Map<Resource, Set<? extends RDFNode>> sliceKeyByDSD =
+                searchByPathVisit(null, sliceKeyProp, null);
         for (Resource dsd : sliceKeyByDSD.keySet()) {
-            Set<Resource> sliceKeySet = sliceKeyByDSD.get(dsd);
-            for (Resource sliceKey : sliceKeySet) {
-                propSet.addAll(objBySubAndProp.get(sliceKey).get(QB_componentProperty));
+            Set<? extends RDFNode> sliceKeySet = sliceKeyByDSD.get(dsd);
+            for (RDFNode sliceKey : sliceKeySet) {
+                propSet.addAll(objBySubAndProp
+                        .get(sliceKey.asResource()).get(QB_componentProperty));
             }
-            for (Resource property : propSet) {
+            for (RDFNode property : propSet) {
                 if (!connectedByPropList(dsd, dsdToProp, property))
-                    componentWithoutDSD.add(property);
+                    compWithoutDSD.add(property);
             }
         }
-        System.out.println(componentWithoutDSD);
+        System.out.println(compWithoutDSD);
     }
 
     public void checkIC9() {
-        Map<Resource, Set<RDFNode>> sliceStructureMap =
+        Map<Resource, Set<RDFNode>> structBySlice =
                 new HashMap<Resource, Set<RDFNode>>();
-        ResIterator sliceIterator = model.listSubjectsWithProperty(RDF_type, QB_Slice);
-        while (sliceIterator.hasNext()) {
-            Resource slice = sliceIterator.nextResource();
-            NodeIterator sliceStructureIterator = model.listObjectsOfProperty(slice,
-                    QB_sliceStructure);
-            Set<RDFNode> sliceStructureSet = sliceStructureIterator.toSet();
-            if (sliceStructureSet.size() != 1) sliceStructureMap.put(slice,
-                    sliceStructureSet);
+        Set<Resource> sliceSet = model.listSubjectsWithProperty(RDF_type, QB_Slice).toSet();
+        for (Resource slice : sliceSet) {
+            Set<RDFNode> sliceStructSet = model.listObjectsOfProperty(slice,
+                    QB_sliceStructure).toSet();
+            if (sliceStructSet.size() != 1) structBySlice.put(slice,
+                    sliceStructSet);
         }
-        System.out.println(sliceStructureMap);
+        System.out.println(structBySlice);
     }
 
     public void checkIC10() {
-        Map<Resource, Resource> sliceWithoutValue = new HashMap<Resource, Resource>();
-        StmtIterator sliceDefIterator = model.listStatements(null,
-                QB_sliceStructure, (RDFNode) null);
-        while (sliceDefIterator.hasNext()) {
-            Statement sliceStatement = sliceDefIterator.nextStatement();
-            Resource slice = sliceStatement.getSubject();
-            NodeIterator dimensionIterator = model.listObjectsOfProperty(
-                    sliceStatement.getObject().asResource(), QB_componentProperty);
-            while (dimensionIterator.hasNext()) {
-                Resource dimension = dimensionIterator.next().asResource();
-                Property dimAsProperty = ResourceFactory.createProperty(
-                        dimension.getURI());
-                NodeIterator dimensionValueIterator = model.listObjectsOfProperty(
-                        slice, dimAsProperty);
-                if (!dimensionValueIterator.hasNext()) sliceWithoutValue.put(slice,
-                        dimension);
+        Map<Resource, RDFNode> dimBySliceWithoutVal = new HashMap<Resource, RDFNode>();
+        List<Property> propPath = Arrays.asList(QB_sliceStructure, QB_componentProperty);
+        Map<Resource, Set<? extends RDFNode>> dimBySlice = searchByPathVisit(null, propPath, null);
+        for (Resource slice : dimBySlice.keySet()) {
+            for (RDFNode dim : dimBySlice.get(slice)) {
+                Property dimAsProp = ResourceFactory.createProperty(dim.asResource().getURI());
+                NodeIterator valIter = model.listObjectsOfProperty(slice, dimAsProp);
+                if (!valIter.hasNext()) dimBySliceWithoutVal.put(slice, dim);
             }
         }
-        System.out.println(sliceWithoutValue);
+        System.out.println(dimBySliceWithoutVal);
     }
-
+/*
     public void checkIC11_12() {
         ResIterator dimensionIterator = model.listSubjectsWithProperty(RDF_type,
                 QB_DimensionProperty);
@@ -771,7 +728,7 @@ public class Validator {
     */
 
     private boolean connectedByPropList(Resource subject,
-                                        List<Property> fixPropList, Resource object) {
+                                        List<Property> fixPropList, RDFNode object) {
         boolean isConnected = false;
         Map<Resource, Set<? extends RDFNode>> objSetBySub = searchByPathVisit(subject,
                 fixPropList, null);
@@ -782,7 +739,7 @@ public class Validator {
     }
 
     private boolean connectedByRepeatedProp(Resource subject, List<Property> fixPropList,
-                                            Property variableProp, Resource object,
+                                            Property variableProp, RDFNode object,
                                             boolean isDirect) {
         boolean isConnected = false;
         Map<Resource, Set<? extends RDFNode>> objSetBySub = searchByPathVisit(subject,
