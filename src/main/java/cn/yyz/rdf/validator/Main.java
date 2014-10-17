@@ -9,9 +9,9 @@ public class Main {
         validator.normalize();
         long t1 = System.currentTimeMillis();
         //validator.checkConstraint("IC19");
-        validator.checkIC10();
+        validator.checkIC11_12();
         long t2 = System.currentTimeMillis();
-        validator.checkIC10_2();
+        validator.checkIC11_12_2();
         long t3 = System.currentTimeMillis();
         System.out.println(t2 - t1);
         System.out.println(t3 - t2);

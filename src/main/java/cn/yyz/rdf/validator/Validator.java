@@ -267,66 +267,61 @@ public class Validator {
         }
         System.out.println(dimBySliceWithoutVal);
     }
-/*
+
     public void checkIC11_12() {
-        ResIterator dimensionIterator = model.listSubjectsWithProperty(RDF_type,
-                QB_DimensionProperty);
-        Set<Resource> dimensionSet = dimensionIterator.toSet();
-        ResIterator datasetIterator = model.listResourcesWithProperty(RDF_type, QB_DataSet);
-        while (datasetIterator.hasNext()) {
-            Resource dataset = datasetIterator.nextResource();
-            dimensionByDataset.put(dataset, new HashSet<Resource>());
-            NodeIterator dsdIterator = model.listObjectsOfProperty(dataset, QB_structure);
-            while (dsdIterator.hasNext()) {
-                Resource dsd = dsdIterator.next().asResource();
-                Set<Resource> componentPropertySet = new HashSet<Resource>();
-                NodeIterator componentIterator = model.listObjectsOfProperty(dsd,
-                        QB_component);
-                while (componentIterator.hasNext()) {
-                    Resource component = componentIterator.next().asResource();
-                    NodeIterator componentPropertyIterator = model.listObjectsOfProperty(
-                            component, QB_componentProperty);
-                    while (componentPropertyIterator.hasNext()) {
-                        componentPropertySet.add(componentPropertyIterator
-                                .next().asResource());
-                    }
-                }
-                componentPropertySet.retainAll(dimensionSet);
-                dimensionByDataset.put(dataset, componentPropertySet);
-            }
+        Map<Resource, Set<RDFNode>> faultyObservation = new HashMap<Resource, Set<RDFNode>>();
+        Map<Resource, Set<Resource>> obsByDataset =
+                new HashMap<Resource, Set<Resource>>();
+        List<Property> propPath = Arrays.asList(QB_structure,
+                QB_component, QB_componentProperty);
+        Map<Resource, Set<? extends RDFNode>> dimByDataset = searchByPathVisit(
+                null, propPath, null);
+        Set<Resource> dimWithDef = model.listResourcesWithProperty(RDF_type,
+                QB_DimensionProperty).toSet();
+        for (Resource dataset : dimByDataset.keySet()) {
+            Set<? extends RDFNode> dimInDataset = dimByDataset.get(dataset);
+            dimInDataset.retainAll(dimWithDef);
+            dimByDataset.put(dataset, dimInDataset);
+
+            obsByDataset.put(dataset,
+                    model.listSubjectsWithProperty(QB_dataSet, dataset).toSet());
         }
 
-        Map<Resource, Resource> obsValueNotExistMap = new HashMap<Resource, Resource>();
-        Set<Resource> duplicateObservationSet = new HashSet<Resource>();
-        for (Resource dataset : dimensionByDataset.keySet()) {
-            Set<Resource> dimensions = dimensionByDataset.get(dataset);
-            ResIterator observationIterator = model.listSubjectsWithProperty(QB_dataSet,
-                    dataset);
-            Map<Resource, Set<Resource>> observationValueMap =
-                    new HashMap<Resource, Set<Resource>>();
-            while (observationIterator.hasNext()) {
-                Resource observation = observationIterator.nextResource();
-                Set<Resource> values = new HashSet<Resource>();
-                for (Resource dimension : dimensions) {
-                    Property dimAsProperty = ResourceFactory.createProperty(
-                            dimension.getURI());
-                    NodeIterator valueIterator = model.listObjectsOfProperty(observation,
-                            dimAsProperty);
-                    if (!valueIterator.hasNext()) obsValueNotExistMap.put(observation,
-                            dimension);
-                    else values.add(valueIterator.next().asResource());
-                }
-                if (observationValueMap.containsValue(values))
-                    duplicateObservationSet.add(observation);
-                else observationValueMap.put(observation, values);
-            }
-            valueByDatasetAndDim.put(dataset, observationValueMap);
+        for (Resource dataset : obsByDataset.keySet()) {
+            Set<Resource> obsSet = obsByDataset.get(dataset);
+            Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
+            faultyObservation.putAll(dimValueCheck(obsSet, dimSet));
         }
-        System.out.println(obsValueNotExistMap);
-        System.out.println(duplicateObservationSet);
+        System.out.println(faultyObservation);
     }
 
-    public void checkIC13() {
+    private Map<Resource, Set<RDFNode>> dimValueCheck (Set<Resource> obsSet,
+                                                  Set<? extends RDFNode> dimSet) {
+        Map<Resource, Set<RDFNode>> faultyObservation = new HashMap<Resource, Set<RDFNode>>();
+        Map<Resource, Set<RDFNode>> valueSetByObs = new HashMap<Resource, Set<RDFNode>>();
+        Set<Property> dimAsPropSet = new HashSet<Property>();
+        for (RDFNode dim : dimSet) {
+            dimAsPropSet.add(ResourceFactory.createProperty(dim.asResource().getURI()));
+        }
+        for (Resource obs : obsSet) {
+            Set<RDFNode> valueSet = new HashSet<RDFNode>();
+            Set<RDFNode> dimWithoutValSet = new HashSet<RDFNode>();
+            for (Property dim : dimAsPropSet) {
+                NodeIterator valueIter = model.listObjectsOfProperty(obs, dim);
+                if (!valueIter.hasNext()) dimWithoutValSet.add(dim);
+                else valueSet.add(valueIter.next());
+            }
+            if (!dimWithoutValSet.isEmpty()) faultyObservation.put(obs, dimWithoutValSet);
+            else {
+                if (valueSetByObs.containsValue(valueSet)) faultyObservation.put(obs,
+                        dimWithoutValSet);
+                else valueSetByObs.put(obs, valueSet);
+            }
+        }
+        return faultyObservation;
+    }
+
+/*    public void checkIC13() {
         Map<Resource, Resource> obsAttributeWithoutValue =
                 new HashMap<Resource, Resource>();
         Map<Resource, Set<Resource>> datasetAttributeMap =
