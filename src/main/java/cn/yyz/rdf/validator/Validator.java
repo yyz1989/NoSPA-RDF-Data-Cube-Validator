@@ -4,6 +4,8 @@ import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.*;
 import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
+import com.hp.hpl.jena.vocabulary.RDF;
+
 import java.io.InputStream;
 import java.util.*;
 
@@ -423,95 +425,107 @@ public class Validator {
         }
         return obsWithFaultyMeasure;
     }
-/*
+
+    public void checkIC17() {
+
+    }
+
     public void checkIC18() {
         Map<Resource, Resource> obsNotInDataset = new HashMap<Resource, Resource>();
         Property[] properties = {QB_slice, QB_observation};
-        Map<Resource, Set<Resource>> datasetObservation = searchByPathVisit(null,
+        Map<Resource, Set<? extends RDFNode>> obsByDataset = searchByPathVisit(null,
                 Arrays.asList(properties), null);
-        for (Resource key : datasetObservation.keySet()) {
-            Set<Resource> observationSet = datasetObservation.get(key);
-            for (Resource observation : observationSet) {
-                StmtIterator obsDefIterator = model.listStatements(observation, QB_dataSet, key);
-                if (!obsDefIterator.hasNext()) obsNotInDataset.put(observation, key);
+        for (Resource dataset : obsByDataset.keySet()) {
+            Set<? extends RDFNode> obsSet = obsByDataset.get(dataset);
+            for (RDFNode obs : obsSet) {
+                Resource obsAsRes = obs.asResource();
+                if (!model.listStatements(obsAsRes, QB_dataSet, dataset).hasNext())
+                    obsNotInDataset.put(obsAsRes, dataset);
             }
         }
         System.out.println(obsNotInDataset);
     }
 
     public void checkIC19() {
-        Map<Resource, Resource> dimensionByObservation = new HashMap<Resource, Resource>();
-        Map<Property, Resource> schemeCodelistByDimension = new HashMap<Property, Resource>();
-        Map<Property, Resource> collectionCodelistByDimension = new HashMap<Property, Resource>();
-        Property[] properties = {QB_structure, QB_component, QB_componentProperty};
-        Map<Resource, Set<Resource>> dimensionByDataset = searchByPathVisit(null,
-                Arrays.asList(properties), null);
-        for (Resource dataset : dimensionByDataset.keySet()) {
-            Set<Resource> dimensionSet = dimensionByDataset.get(dataset);
-            for (Resource dimension : dimensionSet) {
-                Property dimAsProperty = ResourceFactory.createProperty(dimension.getURI());
-                StmtIterator dimDefIterator = model.listStatements(dimension, RDF_type,
-                        QB_DimensionProperty);
-                NodeIterator dimHasCodelistIterator = model.listObjectsOfProperty(dimension,
-                        QB_codeList);
-                if (dimDefIterator.hasNext() && dimHasCodelistIterator.hasNext()) {
-                    Resource codelist = dimHasCodelistIterator.next().asResource();
-                    StmtIterator codelistIsSchemeDef = model.listStatements(codelist,
-                            RDF_type, SKOS_ConceptScheme);
-                    StmtIterator codelistIsCollectionDef = model.listStatements(codelist,
-                            RDF_type, SKOS_Collection);
-                    if (codelistIsSchemeDef.hasNext())
-                        schemeCodelistByDimension.put(dimAsProperty, codelist);
-                    else if (codelistIsCollectionDef.hasNext())
-                        collectionCodelistByDimension.put(dimAsProperty, codelist);
-                }
+        Map<Resource, Set<RDFNode>> dimValIsNotCode = new HashMap<Resource, Set<RDFNode>>();
+        Map<RDFNode, Set<? extends RDFNode>> conceptCLByDim =
+                new HashMap<RDFNode, Set<? extends RDFNode>>();
+        Map<RDFNode, Set<? extends RDFNode>> collectionCLByDim =
+                new HashMap<RDFNode, Set<? extends RDFNode>>();
+        Set<Resource> conceptCLWithDefSet = model.listSubjectsWithProperty(RDF_type,
+                SKOS_ConceptScheme).toSet();
+        Set<Resource> collectionCLWithDefSet = model.listSubjectsWithProperty(RDF_type,
+                SKOS_Collection).toSet();
+        Map<Resource, Set<? extends RDFNode>> dimByDataset = searchByPathVisit(null,
+                Arrays.asList(QB_structure, QB_component, QB_componentProperty), null);
+        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
+        objByProp.put(RDF_type, QB_DimensionProperty);
+        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
+                searchByChildProperty(null, objByProp, Collections.singletonList(QB_codeList));
+        for (Resource dataset : dimByDataset.keySet()) {
+            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
+            Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
+            dimSet.retainAll(objBySubAndProp.keySet());
+            for (RDFNode dim : dimSet) {
+                Set<RDFNode> conceptCLSet = objBySubAndProp.get(dim).get(QB_codeList);
+                Set<RDFNode> collectionCLSet = new HashSet<RDFNode>(conceptCLSet);
+                conceptCLSet.retainAll(conceptCLWithDefSet);
+                collectionCLSet.retainAll(collectionCLWithDefSet);
+                if (!conceptCLSet.isEmpty()) conceptCLByDim.put(dim, conceptCLSet);
+                if (!collectionCLSet.isEmpty()) collectionCLByDim.put(dim, collectionCLSet);
             }
-
-            Set<Resource> observationSet = model.listSubjectsWithProperty(QB_dataSet,
-                    dataset).toSet();
-            for (Resource observation : observationSet) {
-                for (Property dimension : schemeCodelistByDimension.keySet()) {
-                    NodeIterator dimValue = model.listObjectsOfProperty(observation,
-                            dimension);
-                    if (dimValue.hasNext()) {
-                        Resource value = dimValue.next().asResource();
-                        StmtIterator valueTypeDef = model.listStatements(value,
-                                RDF_type, SKOS_Concept);
-                        StmtIterator valueInScheme = model.listStatements(value,
-                                SKOS_inScheme, schemeCodelistByDimension.get(dimension));
-                        if (!valueTypeDef.hasNext() || !valueInScheme.hasNext())
-                            dimensionByObservation.put(observation, dimension.asResource());
-                    }
-                }
-                for (Property dimension : collectionCodelistByDimension.keySet()) {
-                    NodeIterator dimValue = model.listObjectsOfProperty(observation,
-                            dimension);
-                    if (dimValue.hasNext()) {
-                        Resource value = dimValue.next().asResource();
-                        StmtIterator valueTypeDef = model.listStatements(value,
-                                RDF_type, SKOS_Concept);
-                        ResIterator codelistHasValue = model.listSubjectsWithProperty(
-                                SKOS_member, value);
-                        Resource codelist = collectionCodelistByDimension.get(dimension);
-                        boolean valueInCodelist = false;
-                        while (codelistHasValue.hasNext()) {
-                            Resource subWithPropMember = codelistHasValue.nextResource();
-                            if (subWithPropMember.equals(codelist)) {
-                                valueInCodelist = true;
-                                break;
-                            }
-                            else codelistHasValue = model.listSubjectsWithProperty(
-                                    SKOS_member, subWithPropMember);
-                        }
-                        if (!valueTypeDef.hasNext() || valueInCodelist)
-                            dimensionByObservation.put(observation, dimension.asResource());
-                    }
-                }
-            }
+            dimValIsNotCode.putAll(obsWithFaultyDimCheck(obsSet, conceptCLByDim,
+                    collectionCLByDim));
         }
-        System.out.println(dimensionByObservation);
+        System.out.println(dimValIsNotCode);
+        System.out.println(dimValIsNotCode.size());
     }
 
+    private Map<Resource, Set<RDFNode>> obsWithFaultyDimCheck (Set<Resource> obsSet,
+            Map<RDFNode, Set<? extends RDFNode>> conceptCLByDim,
+            Map<RDFNode, Set<? extends RDFNode>> collectionCLByDim) {
+        Map<Resource, Set<RDFNode>> dimValIsNotCode = new HashMap<Resource, Set<RDFNode>>();
+        Set<Property> dimWithConcept = nodeToProperty(conceptCLByDim.keySet());
+        Set<Property> dimWithCollection = nodeToProperty(collectionCLByDim.keySet());
+        for (Resource obs : obsSet) {
+            Set<RDFNode> fautyDimSet = new HashSet<RDFNode>();
+            fautyDimSet.addAll(dimValueCheck(true, obs, dimWithConcept, conceptCLByDim));
+            fautyDimSet.addAll(dimValueCheck(false, obs, dimWithCollection, collectionCLByDim));
+            if (fautyDimSet.size() != 0) dimValIsNotCode.put(obs, fautyDimSet);
+        }
+        return dimValIsNotCode;
+    }
+
+    private Set<RDFNode> dimValueCheck (boolean isConceptList, Resource obs, Set<Property> dimAsPropSet,
+                         Map<RDFNode, Set<? extends RDFNode>> codeListByDim) {
+        Set<RDFNode> fautyDimSet = new HashSet<RDFNode>();
+        for (Property dimAsProp : dimAsPropSet) {
+            Set<RDFNode> valueSet = model.listObjectsOfProperty(obs, dimAsProp).toSet();
+            if (valueSet.size() == 1) {
+                RDFNode value = valueSet.iterator().next();
+                if (!value.isURIResource() || !connectedToCodeList(isConceptList,
+                        value.asResource(), codeListByDim.get(dimAsProp)))
+                    fautyDimSet.add(dimAsProp);
+            }
+        }
+        return fautyDimSet;
+    }
+
+    private boolean connectedToCodeList (boolean isConceptList, Resource value,
+                                         Set<? extends RDFNode> codeListSet) {
+        boolean isConnected = false;
+        if (!model.listStatements(value, RDF_type, SKOS_Concept).hasNext())
+            return false;
+        for (RDFNode codelist : codeListSet) {
+            if (isConceptList)
+                isConnected = model.listStatements(value, SKOS_inScheme, codelist).hasNext();
+            else
+                isConnected = connectedByRepeatedProp(codelist.asResource(), SKOS_member, value);
+            if (isConnected) break;
+        }
+        return isConnected;
+    }
+/*
     public void checkIC20() {
         Map<Resource, Resource> dimensionByObservation = new HashMap<Resource, Resource>();
         Map<Property, Resource> codelistByDimension = new HashMap<Property, Resource>();
