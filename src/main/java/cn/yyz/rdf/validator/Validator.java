@@ -4,7 +4,6 @@ import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.*;
 import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
-import com.hp.hpl.jena.vocabulary.RDF;
 
 import java.io.InputStream;
 import java.util.*;
@@ -75,7 +74,7 @@ public class Validator {
         // Phase 2: Push down attachment levels
         String queryString = NormalizationAlgorithm.PHASE2.getValue();
         UpdateAction.parseExecute(queryString, model);
-
+        
     }
 
     public void precomputeCubeStructure() {
@@ -461,13 +460,13 @@ public class Validator {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_DimensionProperty);
         Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
-                searchByChildProperty(null, objByProp, Collections.singletonList(QB_codeList));
+                searchByChildProperty(null, objByProp, Arrays.asList(QB_codeList));
         for (Resource dataset : dimByDataset.keySet()) {
             Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
             Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
             dimSet.retainAll(objBySubAndProp.keySet());
             for (RDFNode dim : dimSet) {
-                Set<RDFNode> conceptCLSet = objBySubAndProp.get(dim).get(QB_codeList);
+                Set<RDFNode> conceptCLSet = objBySubAndProp.get(dim.asResource()).get(QB_codeList);
                 Set<RDFNode> collectionCLSet = new HashSet<RDFNode>(conceptCLSet);
                 conceptCLSet.retainAll(conceptCLWithDefSet);
                 collectionCLSet.retainAll(collectionCLWithDefSet);
@@ -478,7 +477,6 @@ public class Validator {
                     collectionCLByDim));
         }
         System.out.println(dimValIsNotCode);
-        System.out.println(dimValIsNotCode.size());
     }
 
     private Map<Resource, Set<RDFNode>> obsWithFaultyDimCheck (Set<Resource> obsSet,
@@ -525,159 +523,124 @@ public class Validator {
         }
         return isConnected;
     }
-/*
-    public void checkIC20() {
-        Map<Resource, Resource> dimensionByObservation = new HashMap<Resource, Resource>();
-        Map<Property, Resource> codelistByDimension = new HashMap<Property, Resource>();
-        Set<Property> propertySet = new HashSet<Property>();
-        ResIterator hierarchyTypeDef = model.listSubjectsWithProperty(RDF_type,
-                QB_HierarchicalCodeList);
-        while (hierarchyTypeDef.hasNext()) {
-            NodeIterator hierarchyPropertyIterator = model.listObjectsOfProperty(
-                    hierarchyTypeDef.nextResource(), QB_parentChildProperty);
-            while (hierarchyPropertyIterator.hasNext()) {
-                RDFNode property = hierarchyPropertyIterator.next();
-                if (property.isURIResource()) propertySet.add(
-                        ResourceFactory.createProperty(property.asResource().getURI()));
-            }
-        }
 
-        Set<Resource> hierarchicalCodelistSet = model.listSubjectsWithProperty(RDF_type,
+    public void checkIC20_21 () {
+        Map<Resource, Set<RDFNode>> dimSetByObsNotConByDirPcp =
+                new HashMap<Resource, Set<RDFNode>>();
+        Map<Resource, Set<RDFNode>> dimSetByObsNotConByInvPcp =
+                new HashMap<Resource, Set<RDFNode>>();
+        Map<Resource, Map<String, Set<Property>>> pcpByCodeList = getPcpByCodeList();
+        if (pcpByCodeList.isEmpty()) {
+            return;
+        }
+        Set<Resource> codeListWithDefSet = model.listResourcesWithProperty(RDF_type,
                 QB_HierarchicalCodeList).toSet();
-        ResIterator datasetDefIterator = model.listSubjectsWithProperty(RDF_type, QB_DataSet);
-        Property[] properties = {QB_structure, QB_component, QB_componentProperty};
-        Map<Resource, Set<Resource>> dimensionByDataset = searchByPathVisit(null,
-                Arrays.asList(properties), null);
-        for (Resource dataset : dimensionByDataset.keySet()) {
-            Set<Resource> dimensionSet = dimensionByDataset.get(dataset);
-            for (Resource dimension : dimensionSet) {
-                Property dimAsProperty = ResourceFactory.createProperty(dimension.getURI());
-                StmtIterator dimDefIterator = model.listStatements(dimension, RDF_type,
-                        QB_DimensionProperty);
-                NodeIterator dimHasCodelistIterator = model.listObjectsOfProperty(dimension,
-                        QB_codeList);
-                if (dimDefIterator.hasNext() && dimHasCodelistIterator.hasNext()) {
-                    Resource codelist = dimHasCodelistIterator.next().asResource();
-                    if (hierarchicalCodelistSet.contains(codelist))
-                        codelistByDimension.put(dimAsProperty, codelist);
-                }
+        Map<Resource, Set<? extends RDFNode>> dimByDataset = searchByPathVisit(null,
+                Arrays.asList(QB_structure, QB_component, QB_componentProperty), null);
+        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
+        objByProp.put(RDF_type, QB_DimensionProperty);
+        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
+                searchByChildProperty(null, objByProp, Arrays.asList(QB_codeList));
+        for (Resource dataset : dimByDataset.keySet()) {
+            Map<Property, Set<RDFNode>> codeListByDim = new HashMap<Property, Set<RDFNode>>();
+            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
+            Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
+            dimSet.retainAll(objBySubAndProp.keySet());
+            for (RDFNode dim : dimSet) {
+                Set<RDFNode> codeListSet = objBySubAndProp.get(dim.asResource()).get(QB_codeList);
+                codeListSet.retainAll(codeListWithDefSet);
+                Property dimAsProp = ResourceFactory.createProperty(dim.asResource().getURI());
+                if (!codeListSet.isEmpty()) codeListByDim.put(dimAsProp, codeListSet);
             }
-
-            Set<Resource> observationSet = model.listSubjectsWithProperty(QB_dataSet,
-                    dataset).toSet();
-            for (Resource observation : observationSet) {
-                for (Property dimension : codelistByDimension.keySet()) {
-                    NodeIterator dimValue = model.listObjectsOfProperty(observation,
-                            dimension);
-                    if (dimValue.hasNext()) {
-                        boolean valueInCodelist = false;
-                        for (Property hierarchyProp : propertySet) {
-                            NodeIterator hierarchyRoot = model.listObjectsOfProperty(
-                                    codelistByDimension.get(dimension), QB_hierarchyRoot);
-                            while (hierarchyRoot.hasNext()) {
-                                Resource codelistRoot = hierarchyRoot.next().asResource();
-                                if (codelistRoot.equals(dimValue)) {
-                                    valueInCodelist = true;
-                                    break;
-                                }
-                                else hierarchyRoot = model.listObjectsOfProperty(
-                                        codelistRoot, hierarchyProp);
-                            }
-                            if (valueInCodelist) break;
-                        }
-                        if (valueInCodelist) {
-                            dimensionByObservation.put(observation, dimension.asResource());
-                        }
-                    }
-                }
-            }
+            dimSetByObsNotConByDirPcp.putAll(
+                    obsSetPcpCheck("DIRECT", obsSet, codeListByDim, pcpByCodeList));
+            dimSetByObsNotConByInvPcp.putAll(
+                    obsSetPcpCheck("INVERSE", obsSet, codeListByDim, pcpByCodeList));
         }
-        System.out.println(dimensionByObservation);
+        System.out.println(dimSetByObsNotConByDirPcp.size());
+        System.out.println(dimSetByObsNotConByInvPcp.size());
     }
 
-    public void checkIC20_21() {
-        Map<Resource, Resource> dimensionByObservation = new HashMap<Resource, Resource>();
-        Map<Property, Resource> objByPropParams = new HashMap<Property, Resource>();
-        objByPropParams.put(RDF_type, QB_HierarchicalCodeList.asResource());
-        List<Property> propOnlyParams = Collections.singletonList(QB_codeList);
-        Map<Resource, Map<Property, Set<Resource>>> childpropByCodelistAndProp =
-                searchByChildProperty(null, objByPropParams, propOnlyParams);
-        Set<Resource> propInDefSet = new HashSet<Resource>();
-        Set<Property> propSet = new HashSet<Property>();
-        Set<Property> inversePropSet = new HashSet<Property>();
-        for (Resource codelist : childpropByCodelistAndProp.keySet()) {
-            Map<Property, Set<Resource>> childPropByProp =
-                    childpropByCodelistAndProp.get(codelist);
-            propInDefSet.addAll(childPropByProp.get(QB_parentChildProperty));
+    public Map<Resource, Set<RDFNode>> obsSetPcpCheck (String direction,
+                      Set<Resource> obsSet, Map<Property, Set<RDFNode>> codeListByDim,
+                      Map<Resource, Map<String, Set<Property>>> pcpByCodeList) {
+        Map<Resource, Set<RDFNode>> faultyDimSetByObs = new HashMap<Resource, Set<RDFNode>>();
+        for (Resource obs : obsSet) {
+            Set<RDFNode> faultyDimSet =
+                    obsDimValNotConByPcpCheck(direction, obs, codeListByDim, pcpByCodeList);
+            if (!faultyDimSet.isEmpty()) faultyDimSetByObs.put(obs, faultyDimSet);
         }
-        for (Resource childProp : propInDefSet) {
-            if (childProp.isAnon()) {
-                NodeIterator inversePropIterator = model.listObjectsOfProperty(childProp,
-                        OWL_inverseOf);
-                while (inversePropIterator.hasNext()) {
-                    Property inverseProp = ResourceFactory.createProperty(
-                            inversePropIterator.next().asResource().getURI());
-                    if (inverseProp.isURIResource()) inversePropSet.add(inverseProp);
-                }
-            }
-            else if (childProp.isURIResource()) propSet.add(
-                    ResourceFactory.createProperty(childProp.getURI()));
-        }
-
-        objByPropParams.clear();
-        objByPropParams.put(RDF_type, QB_DimensionProperty);
-        Set<Resource> hierarchicalCodelistSet = model.listSubjectsWithProperty(RDF_type,
-                QB_HierarchicalCodeList).toSet();
-        Map<Resource, Resource> codelistByDimension = new HashMap<Resource, Resource>();
-        for (Resource codelist : hierarchicalCodelistSet) {
-            objByPropParams.put(QB_codeList, codelist);
-            Set<Resource> dimensionSet = searchByChildProperty(null, objByPropParams);
-            for (Resource dimension : dimensionSet) {
-                codelistByDimension.put(dimension, codelist);
-            }
-        }
-
-        Property[] properties = {QB_structure, QB_component, QB_componentProperty};
-        Map<Resource, Set<Resource>> dimensionByDataset = searchByPathVisit(null,
-                Arrays.asList(properties), null);
-        List<Property> fixPropList = Collections.singletonList(QB_hierarchyRoot);
-        for (Resource dataset : dimensionByDataset.keySet()) {
-            Set<Resource> observationSet = model.listSubjectsWithProperty(QB_dataSet,
-                    dataset).toSet();
-            Set<Resource> dimensionSet = dimensionByDataset.get(dataset);
-            dimensionSet.retainAll(codelistByDimension.keySet());
-            for (Resource dimension : dimensionSet) {
-                Resource codelist = codelistByDimension.get(dimension);
-                Property dimAsProperty = ResourceFactory.createProperty(dimension.getURI());
-                for (Resource observation : observationSet) {
-                    NodeIterator dimValue = model.listObjectsOfProperty(observation,
-                            dimAsProperty);
-                    if (dimValue.hasNext()) {
-                        Resource value = dimValue.next().asResource();
-                        boolean isConnected = false;
-                        for (Property prop : propSet) {
-                            if (connectedByRepeatedProp(codelist, fixPropList, prop,
-                                    value, true)) {
-                                isConnected = true;
-                                break;
-                            }
-                        }
-                        if (isConnected) continue;
-                        for (Property invProp : inversePropSet) {
-                            if (connectedByRepeatedProp(codelist, fixPropList, invProp,
-                                    value, false)) {
-                                isConnected = true;
-                                break;
-                            }
-                        }
-                        if (!isConnected) dimensionByObservation.put(observation, dimension);
-                    }
-                }
-            }
-        }
-        System.out.println(dimensionByObservation);
+        return faultyDimSetByObs;
     }
-    */
+
+    public Set<RDFNode> obsDimValNotConByPcpCheck (String direction, Resource obs,
+                          Map<Property, Set<RDFNode>> codeListByDim,
+                          Map<Resource, Map<String, Set<Property>>> pcpByCodeList) {
+        Set<RDFNode> dimNotConByPcp = new HashSet<RDFNode>();
+        for (Property dim : codeListByDim.keySet()) {
+            Set<RDFNode> codeListSet = codeListByDim.get(dim);
+            Set<RDFNode> valueSet = model.listObjectsOfProperty(obs, dim).toSet();
+            if (valueSet.size() != 1) continue;
+            RDFNode value = valueSet.iterator().next();
+            boolean isConnected = false;
+            for (RDFNode codeList : codeListSet) {
+                Map<String, Set<Property>> pcpByDirect = pcpByCodeList.get(codeList.asResource());
+                System.out.println(pcpByDirect);
+                isConnected = connectedByPcp(direction, codeList.asResource(),
+                        pcpByDirect.get(direction), value);
+                if (isConnected) break;
+            }
+            if (!isConnected) dimNotConByPcp.add(dim);
+        }
+        return dimNotConByPcp;
+    }
+
+    public boolean connectedByPcp (String direction, Resource codeList,
+                                   Set<Property> pcpSet, RDFNode value) {
+        boolean isConnected = false;
+        for (Property pcp : pcpSet) {
+            if (direction.equals("DIRECT"))
+                isConnected = connectedByRepeatedProp(codeList, Arrays.asList(QB_hierarchyRoot),
+                        pcp, value, true);
+            else
+                isConnected = connectedByRepeatedProp(codeList, Arrays.asList(QB_hierarchyRoot),
+                        pcp, value, false);
+            if (isConnected) break;
+        }
+        return isConnected;
+    }
+
+    public Map<Resource, Map<String, Set<Property>>> getPcpByCodeList () {
+        Map<Resource, Map<String, Set<Property>>> pcpByCodeList =
+                new HashMap<Resource, Map<String, Set<Property>>>();
+        Map<String, Set<Property>> pcpByDirect = new HashMap<String, Set<Property>>();
+        Set<Property> directPcpSet = new HashSet<Property>();
+        Set<Property> inversePcpSet = new HashSet<Property>();
+        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
+        objByProp.put(RDF_type, QB_HierarchicalCodeList);
+        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
+                searchByChildProperty(null, objByProp, Arrays.asList(QB_parentChildProperty));
+        for (Resource codeList : objBySubAndProp.keySet()) {
+            Set<RDFNode> pcpNodeSet =
+                    objBySubAndProp.get(codeList).get(QB_parentChildProperty);
+            for (RDFNode pcp : pcpNodeSet) {
+                if (pcp.isURIResource())
+                    directPcpSet.add(ResourceFactory.createProperty(pcp.asResource().getURI()));
+                else if (pcp.isAnon()) {
+                    NodeIterator invPcpIter =
+                            model.listObjectsOfProperty(pcp.asResource(), OWL_inverseOf);
+                    inversePcpSet.addAll(nodeToProperty(invPcpIter.toSet()));
+                }
+            }
+            pcpByDirect.put("DIRECT", directPcpSet);
+            pcpByDirect.put("INVERSE", inversePcpSet);
+            pcpByCodeList.put(codeList, pcpByDirect);
+            directPcpSet.clear();
+            inversePcpSet.clear();
+            pcpByDirect.clear();
+        }
+        return pcpByCodeList;
+    }
 
     private boolean connectedByPropList(Resource subject,
                                         List<Property> fixPropList, RDFNode object) {
@@ -751,7 +714,7 @@ public class Validator {
         }
 
         // case: ?obs qb:dataSet eg:dataset1
-        else if (null == subject && object !=null) {
+        else if (subject == null && object !=null) {
             ResIterator subjectIter = model.listSubjectsWithProperty(properties.get(0),
                     object);
             resourceSet = subjectIter.toSet();
@@ -926,7 +889,7 @@ public class Validator {
     private static final Property SKOS_member = ResourceFactory.createProperty(
             PREFIX_SKOS + "member");
     private static final Property OWL_inverseOf = ResourceFactory.createProperty(
-            PREFIX_SKOS + "inverseOf");
+            PREFIX_OWL + "inverseOf");
     private static final Literal LITERAL_FALSE = ResourceFactory.createTypedLiteral(
             Boolean.FALSE);
     private static final Literal LITERAL_TRUE = ResourceFactory.createTypedLiteral(
