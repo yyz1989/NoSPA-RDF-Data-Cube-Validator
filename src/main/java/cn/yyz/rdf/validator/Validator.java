@@ -74,7 +74,7 @@ public class Validator {
         // Phase 2: Push down attachment levels
         String queryString = NormalizationAlgorithm.PHASE2.getValue();
         UpdateAction.parseExecute(queryString, model);
-        
+
     }
 
     public void precomputeCubeStructure() {
@@ -326,7 +326,7 @@ public class Validator {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(QB_componentRequired, LITERAL_TRUE);
         Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp = searchByChildProperty(null,
-                objByProp, Collections.singletonList(QB_componentProperty));
+                objByProp, Arrays.asList(QB_componentProperty));
         for (Resource dataset : compByDataset.keySet()) {
             Set<? extends RDFNode> compSet = compByDataset.get(dataset);
             Set<RDFNode> attribSet = new HashSet<RDFNode>();
@@ -426,7 +426,67 @@ public class Validator {
     }
 
     public void checkIC17() {
+        List<Property> propPath = Arrays.asList(QB_structure,
+                QB_component, QB_componentProperty);
+        Map<Resource, Set<? extends RDFNode>> compPropByDataset = searchByPathVisit(
+                null, propPath, null);
+        Set<Resource> measPropWithDef = model.listResourcesWithProperty(RDF_type,
+                QB_MeasureProperty).toSet();
+        Set<Resource> dimPropWithDef = model.listResourcesWithProperty(RDF_type,
+                QB_DimensionProperty).toSet();
+        for (Resource dataset : compPropByDataset.keySet()) {
+            Set<? extends RDFNode> compPropSet = compPropByDataset.get(dataset);
+            Set<? extends RDFNode> dimPropSet = new HashSet<RDFNode>(compPropSet);
+            compPropSet.retainAll(measPropWithDef);
+            int numOfMeasure = compPropSet.size();
 
+            Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
+            objByProp.put(QB_dataSet, dataset);
+            Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp = searchByChildProperty(null,
+                    objByProp, Arrays.asList(QB_measureType));
+
+            dimPropSet.retainAll(dimPropWithDef);
+            for (RDFNode dim : dimPropSet) {
+                if (dim.equals(QB_measureType)) dimPropSet.remove(dim);
+            }
+
+            Map<Resource, Integer> numObs2ByObs1WithEqVal =
+                    equalObsCheck(objBySubAndProp, dimPropSet);
+            for (Resource obs : numObs2ByObs1WithEqVal.keySet()) {
+                if (numObs2ByObs1WithEqVal.get(obs) != numOfMeasure)
+                    System.out.println(obs);
+            }
+        }
+
+    }
+
+    public Map<Resource, Integer> equalObsCheck (
+            Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp,
+            Set<? extends RDFNode> dimPropSet) {
+        Set<Resource> obsSet = objBySubAndProp.keySet();
+        Map<Resource, Integer> numObs2ByObs1WithEqVal = new HashMap<Resource, Integer>();
+        for (RDFNode dim : dimPropSet) {
+            Property dimAsProp = ResourceFactory.createProperty(dim.asResource().getURI());
+            for (Resource obs1 : obsSet) {
+                Set<RDFNode> valueSet1 = model.listObjectsOfProperty(obs1, dimAsProp).toSet();
+                if (valueSet1.size() != 1) continue;
+                RDFNode value1 = valueSet1.iterator().next();
+                for (Resource obs2 : obsSet) {
+                    Set<RDFNode> valueSet2 = model.listObjectsOfProperty(obs2, dimAsProp).toSet();
+                    if (valueSet2.size() != 1) continue;
+                    RDFNode value2 = valueSet2.iterator().next();
+                    if (value1.equals(value2)) {
+                        if (!numObs2ByObs1WithEqVal.containsKey(obs1))
+                            numObs2ByObs1WithEqVal.put(obs1, 0);
+                        else {
+                            int numObs2 = numObs2ByObs1WithEqVal.get(obs1);
+                            numObs2ByObs1WithEqVal.put(obs1, ++numObs2);
+                        }
+                    }
+                }
+            }
+        }
+        return numObs2ByObs1WithEqVal;
     }
 
     public void checkIC18() {
