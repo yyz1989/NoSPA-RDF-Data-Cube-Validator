@@ -77,6 +77,27 @@ public class Validator {
 
     }
 
+    public void checkICAll() {
+        checkIC1();
+        checkIC2();
+        checkIC3();
+        checkIC4();
+        checkIC5();
+        checkIC6();
+        checkIC7();
+        checkIC8();
+        checkIC9();
+        checkIC10();
+        checkIC11_12();
+        checkIC13();
+        checkIC14();
+        checkIC15_16();
+        checkIC17();
+        checkIC18();
+        checkIC19();
+        checkIC20_21();
+    }
+
     public void precomputeCubeStructure() {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_DataSet);
@@ -91,11 +112,11 @@ public class Validator {
         }
     }
 
-    public void checkConstraint(String constraint) {
-        checkConstraint(IntegrityConstraint.valueOf(constraint));
+    public void checkICBySparql(String constraint) {
+        checkICBySparql(IntegrityConstraint.valueOf(constraint));
     }
 
-    public void checkConstraint(IntegrityConstraint constraint) {
+    public void checkICBySparql(IntegrityConstraint constraint) {
         String prefix = IntegrityConstraint.PREFIX.getValue();
         Query query = QueryFactory.create(prefix + constraint.getValue());
         QueryExecution qe = QueryExecutionFactory.create(query, model);
