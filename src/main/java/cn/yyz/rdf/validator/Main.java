@@ -1,5 +1,8 @@
 package cn.yyz.rdf.validator;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Created by yyz on 9/26/14.
  */

@@ -426,6 +426,7 @@ public class Validator {
     }
 
     public void checkIC17() {
+        Map<Resource, Integer> numObs2ByObs1 = new HashMap<Resource, Integer>();
         List<Property> propPath = Arrays.asList(QB_structure,
                 QB_component, QB_componentProperty);
         Map<Resource, Set<? extends RDFNode>> compPropByDataset = searchByPathVisit(
@@ -434,59 +435,60 @@ public class Validator {
                 QB_MeasureProperty).toSet();
         Set<Resource> dimPropWithDef = model.listResourcesWithProperty(RDF_type,
                 QB_DimensionProperty).toSet();
+        Set<Resource> obsWithMeasure = model.listResourcesWithProperty(QB_measureType).toSet();
         for (Resource dataset : compPropByDataset.keySet()) {
             Set<? extends RDFNode> compPropSet = compPropByDataset.get(dataset);
             Set<? extends RDFNode> dimPropSet = new HashSet<RDFNode>(compPropSet);
             compPropSet.retainAll(measPropWithDef);
             int numOfMeasure = compPropSet.size();
 
-            Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-            objByProp.put(QB_dataSet, dataset);
-            Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp = searchByChildProperty(null,
-                    objByProp, Arrays.asList(QB_measureType));
+            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
+            obsSet.retainAll(obsWithMeasure);
+            if (obsSet.size() == 0) continue;
 
             dimPropSet.retainAll(dimPropWithDef);
             for (RDFNode dim : dimPropSet) {
                 if (dim.equals(QB_measureType)) dimPropSet.remove(dim);
             }
 
-            Map<Resource, Integer> numObs2ByObs1WithEqVal =
-                    equalObsCheck(objBySubAndProp, dimPropSet);
-            for (Resource obs : numObs2ByObs1WithEqVal.keySet()) {
-                if (numObs2ByObs1WithEqVal.get(obs) != numOfMeasure)
-                    System.out.println(obs);
+            Map<Resource, Set<Resource>> unqualifiedObsPair =
+                    unqualifiedObsPairCheck(obsSet, dimPropSet);
+            int numOfObs1 = unqualifiedObsPair.keySet().size();
+            for (Resource obs : unqualifiedObsPair.keySet()) {
+                int numOfObs2 = unqualifiedObsPair.get(obs).size();
+                if (numOfObs1 - numOfObs2 != numOfMeasure)
+                    numObs2ByObs1.put(obs, numOfObs2);
             }
         }
-
+        System.out.println(numObs2ByObs1);
     }
 
-    public Map<Resource, Integer> equalObsCheck (
-            Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp,
+    public Map<Resource, Set<Resource>> unqualifiedObsPairCheck (
+            Set<Resource> obsSet,
             Set<? extends RDFNode> dimPropSet) {
-        Set<Resource> obsSet = objBySubAndProp.keySet();
-        Map<Resource, Integer> numObs2ByObs1WithEqVal = new HashMap<Resource, Integer>();
-        for (RDFNode dim : dimPropSet) {
-            Property dimAsProp = ResourceFactory.createProperty(dim.asResource().getURI());
-            for (Resource obs1 : obsSet) {
-                Set<RDFNode> valueSet1 = model.listObjectsOfProperty(obs1, dimAsProp).toSet();
-                if (valueSet1.size() != 1) continue;
-                RDFNode value1 = valueSet1.iterator().next();
-                for (Resource obs2 : obsSet) {
-                    Set<RDFNode> valueSet2 = model.listObjectsOfProperty(obs2, dimAsProp).toSet();
-                    if (valueSet2.size() != 1) continue;
+        Set<Property> dimAsPropSet = nodeToProperty(dimPropSet);
+        Map<Resource, Set<Resource>> unqualifiedObsPair =
+                new HashMap<Resource, Set<Resource>>();
+        for (Resource obs1 : obsSet) {
+            Set<Resource> unqualifiedObsSet = new HashSet<Resource>();
+            for (Resource obs2 : obsSet) {
+                boolean isEqual = true;
+                for (Property dim : dimAsPropSet) {
+                    Set<RDFNode> valueSet1 = model.listObjectsOfProperty(obs1, dim).toSet();
+                    Set<RDFNode> valueSet2 = model.listObjectsOfProperty(obs2, dim).toSet();
+                    if (valueSet1.size() != 1 || valueSet2.size() != 1) continue;
+                    RDFNode value1 = valueSet1.iterator().next();
                     RDFNode value2 = valueSet2.iterator().next();
-                    if (value1.equals(value2)) {
-                        if (!numObs2ByObs1WithEqVal.containsKey(obs1))
-                            numObs2ByObs1WithEqVal.put(obs1, 0);
-                        else {
-                            int numObs2 = numObs2ByObs1WithEqVal.get(obs1);
-                            numObs2ByObs1WithEqVal.put(obs1, ++numObs2);
-                        }
+                    if (!value1.equals(value2)) {
+                        isEqual = false;
+                        break;
                     }
                 }
+                if (!isEqual) unqualifiedObsSet.add(obs2);
             }
+            unqualifiedObsPair.put(obs1, unqualifiedObsSet);
         }
-        return numObs2ByObs1WithEqVal;
+        return unqualifiedObsPair;
     }
 
     public void checkIC18() {
