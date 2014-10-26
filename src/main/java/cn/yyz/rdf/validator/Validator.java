@@ -28,8 +28,8 @@ public class Validator {
         model.read(inputStream, null, format);
     }
 
-    public void output() {
-        model.write(System.out, "TURTLE");
+    public void output(String outputPath, String outputFormat) {
+        model.write(System.out, outputFormat);
     }
 
     public void normalizeBySparql() {
