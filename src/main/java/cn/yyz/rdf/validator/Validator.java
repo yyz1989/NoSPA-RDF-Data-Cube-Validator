@@ -32,6 +32,13 @@ public class Validator {
         model.write(System.out, "TURTLE");
     }
 
+    public void normalizeBySparql() {
+        String queryString1 = NormalizationAlgorithm.PHASE1.getValue();
+        String queryString2 = NormalizationAlgorithm.PHASE2.getValue();
+        UpdateAction.parseExecute(queryString1, model);
+        UpdateAction.parseExecute(queryString2, model);
+    }
+
     public void normalizePhase1() {
         // Phase 1: Type and property closure
         NodeIterator nodeIterator = model.listObjectsOfProperty(QB_observation);

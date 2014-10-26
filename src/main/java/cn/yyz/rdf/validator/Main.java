@@ -1,5 +1,7 @@
 package cn.yyz.rdf.validator;
 
+import com.hp.hpl.jena.update.UpdateAction;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -8,12 +10,12 @@ import java.util.Set;
  */
 public class Main {
     public static void main(String[] args) {
-        Validator validator = new Validator("largeTest.ttl", "TTL");
-        validator.normalize();
+        Validator validator = new Validator("test.ttl", "TTL");
         long t1 = System.currentTimeMillis();
-        //validator.checkConstraint("IC19");
+        validator.normalizeBySparql();
         long t2 = System.currentTimeMillis();
-        validator.checkIC17();
+        validator.normalizePhase1();
+        validator.normalizePhase2();
         long t3 = System.currentTimeMillis();
         System.out.println(t2 - t1);
         System.out.println(t3 - t2);
