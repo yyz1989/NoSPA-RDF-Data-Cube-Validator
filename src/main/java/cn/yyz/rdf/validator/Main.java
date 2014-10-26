@@ -29,15 +29,16 @@ public class Main {
         String outputFormat = properties.getProperty("OUTPUT_FORMAT");
 
         Validator validator = new Validator(inputPath, inputFormat);
+        validator.normalizePhase1();
+        validator.normalizePhase2();
+
         long t1 = System.currentTimeMillis();
         //validator.normalizeBySparql();
         long t2 = System.currentTimeMillis();
-        validator.normalizePhase1();
-        validator.normalizePhase2();
+        validator.checkIC1();
         long t3 = System.currentTimeMillis();
         System.out.println(t2 - t1);
         System.out.println(t3 - t2);
-        System.out.println();
         //validator.output(outputPath, outputFormat);
     }
 }
