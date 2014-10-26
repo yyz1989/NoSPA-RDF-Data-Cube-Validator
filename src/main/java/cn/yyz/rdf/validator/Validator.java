@@ -5,6 +5,9 @@ import com.hp.hpl.jena.rdf.model.*;
 import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
 import com.hp.hpl.jena.vocabulary.RDF;
+import org.apache.commons.codec.binary.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.util.*;
@@ -13,6 +16,7 @@ import java.util.*;
  * Created by yyz on 9/26/14.
  */
 public class Validator {
+    private Logger logger = LoggerFactory.getLogger(Validator.class);
     private Model model;
     private Map<Resource, Set<Resource>> dimensionByDataset =
             new HashMap<Resource, Set<Resource>>();
@@ -21,10 +25,17 @@ public class Validator {
     private Map<Resource, Set<RDFNode>> dsdByDataset = new HashMap<Resource, Set<RDFNode>>();
 
     public Validator(String filename, String format) {
+        logger.debug("RDF Cube Validation Result");
+        logger.debug("==========================");
+        logger.debug("");
+        logger.info("Loading cube file ...");
         model = ModelFactory.createDefaultModel();
         InputStream inputStream = FileManager.get().open(filename);
-        if (inputStream == null) throw new IllegalArgumentException(
-                "File " + filename + " not found");
+        if (inputStream == null) {
+            String msg = "File " + filename + " not found";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
         model.read(inputStream, null, format);
     }
 
@@ -41,46 +52,58 @@ public class Validator {
 
     public void normalizePhase1() {
         // Phase 1: Type and property closure
-        NodeIterator nodeIterator = model.listObjectsOfProperty(QB_observation);
-        while (nodeIterator.hasNext()) {
-            model.add(nodeIterator.next().asResource(), RDF_type, QB_Observation);
+        logger.info("Normalizing cube at phase 1 ...");
+
+        Set<RDFNode> obsSet = model.listObjectsOfProperty(QB_observation).toSet();
+        for (RDFNode obs : obsSet) {
+            if (obs.isResource())
+                model.add(obs.asResource(), RDF_type, QB_Observation);
         }
 
-        StmtIterator stmtIterator = model.listStatements(null, QB_dataSet, (RDFNode) null);
-        while (stmtIterator.hasNext()) {
-            Statement statement = stmtIterator.nextStatement();
-            model.add(statement.getObject().asResource(), RDF_type, QB_DataSet);
+        StmtIterator stmtIter = model.listStatements(null, QB_dataSet, (RDFNode) null);
+        while (stmtIter.hasNext()) {
+            Statement statement = stmtIter.nextStatement();
+            RDFNode obj = statement.getObject();
+            if (obj.isResource())
+                model.add(obj.asResource(), RDF_type, QB_DataSet);
             model.add(statement.getSubject(), RDF_type, QB_Observation);
         }
 
-        nodeIterator = model.listObjectsOfProperty(QB_slice);
-        while (nodeIterator.hasNext()) {
-            model.add(nodeIterator.next().asResource(), RDF_type, QB_Slice);
+        Set<RDFNode> sliceSet = model.listObjectsOfProperty(QB_slice).toSet();
+        for (RDFNode slice : sliceSet) {
+            model.add(slice.asResource(), RDF_type, QB_Slice);
         }
 
-        stmtIterator = model.listStatements(null, QB_dimension, (RDFNode) null);
-        while (stmtIterator.hasNext()) {
-            Statement statement = stmtIterator.nextStatement();
+        stmtIter = model.listStatements(null, QB_dimension, (RDFNode) null);
+        while (stmtIter.hasNext()) {
+            Statement statement = stmtIter.nextStatement();
+            RDFNode obj = statement.getObject();
+            if (obj.isResource())
+                model.add(obj.asResource(), RDF_type, QB_DimensionProperty);
             model.add(statement.getSubject(), QB_componentProperty, statement.getObject());
-            model.add(statement.getObject().asResource(), RDF_type, QB_DimensionProperty);
         }
 
-        stmtIterator = model.listStatements(null, QB_measure, (RDFNode) null);
-        while (stmtIterator.hasNext()) {
-            Statement statement = stmtIterator.nextStatement();
+        stmtIter = model.listStatements(null, QB_measure, (RDFNode) null);
+        while (stmtIter.hasNext()) {
+            Statement statement = stmtIter.nextStatement();
+            RDFNode obj = statement.getObject();
+            if (obj.isResource())
+                model.add(obj.asResource(), RDF_type, QB_MeasureProperty);
             model.add(statement.getSubject(), QB_componentProperty, statement.getObject());
-            model.add(statement.getObject().asResource(), RDF_type, QB_MeasureProperty);
         }
 
-        stmtIterator = model.listStatements(null, QB_attribute, (RDFNode) null);
-        while (stmtIterator.hasNext()) {
-            Statement statement = stmtIterator.nextStatement();
+        stmtIter = model.listStatements(null, QB_attribute, (RDFNode) null);
+        while (stmtIter.hasNext()) {
+            Statement statement = stmtIter.nextStatement();
+            RDFNode obj = statement.getObject();
+            if (obj.isResource())
+                model.add(obj.asResource(), RDF_type, QB_AttributeProperty);
             model.add(statement.getSubject(), QB_componentProperty, statement.getObject());
-            model.add(statement.getObject().asResource(), RDF_type, QB_AttributeProperty);
         }
     }
 
     public void normalizePhase2() {
+        logger.info("Normalizing cube at phase 2 ...");
         pushDownDatasetAttachments();
         pushDownSliceAttachments();
         pushDownDimValOnSlice();
@@ -193,6 +216,7 @@ public class Validator {
     }
 
     public void checkICAll() {
+        logger.info("Validating all constraints ...");
         checkIC1();
         checkIC2();
         checkIC3();
@@ -248,19 +272,21 @@ public class Validator {
     }
 
     public void checkIC1() {
-        Map<Resource, Set<RDFNode>> datasetByObservation =
+        String icName = "Integrity Constraint 1";
+        logger.info("Validating " + icName);
+        Map<Resource, Set<RDFNode>> datasetByObs =
                 new HashMap<Resource, Set<RDFNode>>();
-        ResIterator observationIter = model.listSubjectsWithProperty(
-                RDF_type, QB_Observation);
-        while (observationIter.hasNext()) {
-            Resource observation = observationIter.nextResource();
-            Set<RDFNode> datasetSet = searchObjectsOfProperty(
-                    Collections.singleton(observation), QB_dataSet);
+        Set<Resource> obsSet = model.listSubjectsWithProperty(
+                RDF_type, QB_Observation).toSet();
+        for (Resource obs : obsSet) {
+            Set<RDFNode> datasetSet = model.listObjectsOfProperty(obs, QB_dataSet).toSet();
             if (datasetSet.size() != 1) {
-                datasetByObservation.put(observation, datasetSet);
+                datasetByObs.put(obs, datasetSet);
             }
         }
-        System.out.println(datasetByObservation);
+
+        String logMsg = " is associated to datasets: ";
+        logResult(icName, datasetByObs, logMsg);
     }
 
     public void checkIC2() {
@@ -1012,6 +1038,37 @@ public class Validator {
                     node.asResource().getURI()));
         }
         return propSet;
+    }
+
+    private void logResult (String icName, Set<?> set, String msg) {
+        logger.debug(icName);
+        logger.debug(new String(new char[icName.length()]).replace("\0", "-"));
+        logger.debug("");
+        if (set.isEmpty()) logger.debug("Pass.");
+        else {
+            logger.debug(msg);
+            for (Object obj : set) {
+                logger.debug("    " + obj);
+            }
+        }
+        logger.debug("");
+    }
+
+    private void logResult (String icName,
+                            Map<Resource, Set<RDFNode>> map, String msg) {
+        logger.debug(icName);
+        logger.debug(new String(new char[icName.length()]).replace("\0", "-"));
+        logger.debug("");
+        if (map.isEmpty()) logger.debug("Pass.");
+        else {
+            for (Resource key : map.keySet()) {
+                logger.debug(key.toString() + msg);
+                for (RDFNode nodeInSet : map.get(key)) {
+                    logger.debug("    " + nodeInSet);
+                }
+            }
+        }
+        logger.debug("");
     }
 
     private static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";
