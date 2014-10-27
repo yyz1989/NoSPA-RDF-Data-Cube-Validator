@@ -13,7 +13,7 @@ import java.io.InputStream;
 import java.util.*;
 
 /**
- * Created by yyz on 9/26/14.
+ * Created by Yang Yuanzhe on 9/26/14.
  */
 public class Validator {
     private Logger logger = LoggerFactory.getLogger(Validator.class);
@@ -24,6 +24,11 @@ public class Validator {
             new HashMap<Resource, Map<Resource, Set<Resource>>>();
     private Map<Resource, Set<RDFNode>> dsdByDataset = new HashMap<Resource, Set<RDFNode>>();
 
+    /**
+     * Constructor of a validator
+     * @param filename complete path of the cube file to be validated
+     * @param format RDF serialization format of the cube file
+     */
     public Validator(String filename, String format) {
         logger.debug("RDF Cube Validation Result");
         logger.debug("==========================");
@@ -39,10 +44,18 @@ public class Validator {
         model.read(inputStream, null, format);
     }
 
+    /**
+     * Export the current RDF model to a file.
+     * @param outputPath file path used for output
+     * @param outputFormat RDF serialization format (eg., RDF/XML, TURTLE, ...)
+     */
     public void output(String outputPath, String outputFormat) {
         model.write(System.out, outputFormat);
     }
 
+    /**
+     * This function normalizes an abbreviated Data Cube with SPARQL queries.
+     */
     public void normalizeBySparql() {
         String queryString1 = NormalizationAlgorithm.PHASE1.getValue();
         String queryString2 = NormalizationAlgorithm.PHASE2.getValue();
@@ -50,6 +63,14 @@ public class Validator {
         UpdateAction.parseExecute(queryString2, model);
     }
 
+    /**
+     * This function normalizes an abbreviated Data Cube at phase 1 for type
+     * and property closure. It ensures that rdf:type assertions on instances
+     * of qb:Observation and qb:Slice may be omitted in an abbreviated Data
+     * Cube. They also simplify the second set of update operations by
+     * expanding the sub properties of qb:componentProperty (specifically
+     * qb:dimension, qb:measure and qb:attribute).
+     */
     public void normalizePhase1() {
         // Phase 1: Type and property closure
         logger.info("Normalizing cube at phase 1 ...");
@@ -102,6 +123,13 @@ public class Validator {
         }
     }
 
+    /**
+     * This function normalizes an abbreviated Data Cube at phase 2. It checks
+     * the components of the data structure definition of the data set for
+     * declared attachment levels. For each of the possible attachments levels
+     * it looks for ocurrences of that component to be pushed down to the
+     * corresponding observations.
+     */
     public void normalizePhase2() {
         logger.info("Normalizing cube at phase 2 ...");
         pushDownDatasetAttachments();
@@ -109,6 +137,9 @@ public class Validator {
         pushDownDimValOnSlice();
     }
 
+    /**
+     * Push down Dataset attachments.
+     */
     private void pushDownDatasetAttachments() {
         Map<Resource, Set<? extends RDFNode>> specSetByDataset = searchByPathVisit(null,
                 Arrays.asList(QB_structure, QB_component), null);
@@ -137,6 +168,9 @@ public class Validator {
         }
     }
 
+    /**
+     * Push dwon Slice Attachments.
+     */
     private void pushDownSliceAttachments() {
         Map<Resource, Set<? extends RDFNode>> specSetByDataset = searchByPathVisit(null,
                 Arrays.asList(QB_structure, QB_component), null);
@@ -170,6 +204,9 @@ public class Validator {
         }
     }
 
+    /**
+     * Push down dimension values on slices.
+     */
     private void pushDownDimValOnSlice () {
         Map<Resource, Set<? extends RDFNode>> specSetByDataset = searchByPathVisit(null,
                 Arrays.asList(QB_structure, QB_component), null);
@@ -204,6 +241,12 @@ public class Validator {
         }
     }
 
+    /**
+     * Insert statements to the model for the given observations.
+     * @param obsSet a set of observations to be associated with new statements
+     * @param objSetByProp a map containing the properties and corresponding
+     *                     object values to be associated to the observations
+     */
     private void insertValueToObs(Set<Resource> obsSet, Map<Property, Set<RDFNode>> objSetByProp) {
         for (Property prop : objSetByProp.keySet()) {
             Set<RDFNode> objSet = objSetByProp.get(prop);
@@ -215,6 +258,9 @@ public class Validator {
         }
     }
 
+    /**
+     * A shortcut function to excute all constraint validations.
+     */
     public void checkICAll() {
         logger.info("Validating all constraints ...");
         checkIC1();
@@ -237,6 +283,9 @@ public class Validator {
         checkIC20_21();
     }
 
+    /**
+     * Temporarily deprecated.
+     */
     public void precomputeCubeStructure() {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_DataSet);
@@ -251,10 +300,18 @@ public class Validator {
         }
     }
 
+    /**
+     * The function to validate constraints by SPARQL queries
+     * @param constraint name of constraint (e.g., IC1)
+     */
     public void checkICBySparql(String constraint) {
         checkICBySparql(IntegrityConstraint.valueOf(constraint));
     }
 
+    /**
+     * The function to validate constraints by SPARQL queries
+     * @param constraint constraint defined in an enum class
+     */
     public void checkICBySparql(IntegrityConstraint constraint) {
         String prefix = IntegrityConstraint.PREFIX.getValue();
         Query query = QueryFactory.create(prefix + constraint.getValue());
@@ -271,7 +328,12 @@ public class Validator {
         qe.close();
     }
 
-    public void checkIC1() {
+    /**
+     * Validate IC-1 Unique DataSet: Every qb:Observation has exactly one
+     * associated qb:DataSet.
+     * @return a map containing observations with multiple datasets
+     */
+    public Map<Resource, Set<RDFNode>> checkIC1() {
         String icName = "Integrity Constraint 1";
         logger.info("Validating " + icName);
         Map<Resource, Set<RDFNode>> datasetByObs =
@@ -284,9 +346,9 @@ public class Validator {
                 datasetByObs.put(obs, datasetSet);
             }
         }
-
         String logMsg = " is associated to datasets: ";
-        logResult(icName, datasetByObs, logMsg);
+        logValidationResult(icName, datasetByObs, logMsg);
+        return datasetByObs;
     }
 
     public void checkIC2() {
@@ -1040,31 +1102,31 @@ public class Validator {
         return propSet;
     }
 
-    private void logResult (String icName, Set<?> set, String msg) {
+    private <T> void logValidationResult (String icName, Set<T> set, String msg) {
         logger.debug(icName);
         logger.debug(new String(new char[icName.length()]).replace("\0", "-"));
         logger.debug("");
         if (set.isEmpty()) logger.debug("Pass.");
         else {
             logger.debug(msg);
-            for (Object obj : set) {
-                logger.debug("    " + obj);
+            for (T obj : set) {
+                logger.debug("    " + obj.toString());
             }
         }
         logger.debug("");
     }
 
-    private void logResult (String icName,
-                            Map<Resource, Set<RDFNode>> map, String msg) {
+    private <K, V> void logValidationResult (String icName,
+                            Map<K, Set<V>> map, String msg) {
         logger.debug(icName);
         logger.debug(new String(new char[icName.length()]).replace("\0", "-"));
         logger.debug("");
         if (map.isEmpty()) logger.debug("Pass.");
         else {
-            for (Resource key : map.keySet()) {
+            for (K key : map.keySet()) {
                 logger.debug(key.toString() + msg);
-                for (RDFNode nodeInSet : map.get(key)) {
-                    logger.debug("    " + nodeInSet);
+                for (V nodeInSet : map.get(key)) {
+                    logger.debug("    " + nodeInSet.toString());
                 }
             }
         }
