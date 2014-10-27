@@ -35,7 +35,7 @@ public class Main {
         long t1 = System.currentTimeMillis();
         //validator.normalizeBySparql();
         long t2 = System.currentTimeMillis();
-        validator.checkIC5();
+        validator.checkIC13();
         long t3 = System.currentTimeMillis();
         System.out.println(t2 - t1);
         System.out.println(t3 - t2);

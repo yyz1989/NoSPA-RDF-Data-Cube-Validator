@@ -334,7 +334,7 @@ public class Validator {
      * @return a map of observations with multiple datasets
      */
     public Map<Resource, Set<RDFNode>> checkIC1() {
-        String icName = "Integrity Constraint 1";
+        String icName = "Integrity Constraint 1: Unique DataSet";
         logger.info("Validating " + icName);
         Map<Resource, Set<RDFNode>> datasetByObs =
                 new HashMap<Resource, Set<RDFNode>>();
@@ -357,7 +357,7 @@ public class Validator {
      * @return a map of datasets with multiple dsds
      */
     public Map<Resource, Set<RDFNode>> checkIC2() {
-        String icName = "Integrity Constraint 2";
+        String icName = "Integrity Constraint 2: Unique DSD";
         logger.info("Validating " + icName);
         Map<Resource, Set<RDFNode>> dsdByDataset =
                 new HashMap<Resource, Set<RDFNode>>();
@@ -380,7 +380,7 @@ public class Validator {
      * @return a set of DSDs without at least one declared measure
      */
     public Set<Resource> checkIC3() {
-        String icName = "Integrity Constraint 3";
+        String icName = "Integrity Constraint 3: DSD Includes Measure";
         logger.info("Validating " + icName);
         Set<Resource> dsdWithoutMeasure = new HashSet<Resource>();
         Set<Resource> dsdSet = model.listSubjectsWithProperty(RDF_type,
@@ -402,7 +402,7 @@ public class Validator {
      * @return a set of dimensions without a declared rdfs:range
      */
     public Set<Resource> checkIC4() {
-        String icName = "Integrity Constraint 4";
+        String icName = "Integrity Constraint 4: Dimensions Have Range";
         logger.info("Validating " + icName);
         Set<Resource> dimSet = model.listSubjectsWithProperty(RDF_type,
                 QB_DimensionProperty).toSet();
@@ -421,7 +421,7 @@ public class Validator {
      * @return a set of concept dimensions without code lists
      */
     public Set<Resource> checkIC5() {
-        String icName = "Integrity Constraint 5";
+        String icName = "Integrity Constraint 5: Concept Dimensions Have Code Lists";
         logger.info("Validating " + icName);
         Set<Resource> dimWithoutCodeList = new HashSet<Resource>();
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
@@ -444,7 +444,7 @@ public class Validator {
      * @return a set of component properties not declared as attributes
      */
     public Set<RDFNode> checkIC6() {
-        String icName = "Integrity Constraint 6";
+        String icName = "Integrity Constraint 6: Only Attributes May Be Optional";
         logger.info("Validating " + icName);
         Set<RDFNode> compPropSet = new HashSet<RDFNode>();
         Map<Property, RDFNode> objyByProp = new HashMap<Property, RDFNode>();
@@ -466,47 +466,71 @@ public class Validator {
         return compPropSet;
     }
 
-    public void checkIC7() {
-        Map<Property, RDFNode> objectByProperty = new HashMap<Property, RDFNode>();
-        objectByProperty.put(RDF_type, QB_DataStructureDefinition);
-        List<Property> propertyOnly = Collections.singletonList(QB_sliceKey);
-        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
-                searchByChildProperty(null, objectByProperty, propertyOnly);
+    /**
+     * Validate IC-7 Slice Keys must be declared: Every qb:SliceKey must be
+     * associated with a qb:DataStructureDefinition.
+     * @return a set of Slice Keys not associated with DSDs
+     */
+    public Set<Resource> checkIC7() {
+        String icName = "Integrity Constraint 7: Slice Keys Must Be Declared";
+        logger.info("Validating " + icName);
+        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
+        objByProp.put(RDF_type, QB_DataStructureDefinition);
+        Map<Resource, Map<Property, Set<RDFNode>>> sliceKeyByDSD =
+                searchByChildProperty(null, objByProp, Arrays.asList(QB_sliceKey));
         Set<Resource> sliceKeySet = model.listSubjectsWithProperty(RDF_type, QB_SliceKey).toSet();
-        for (Resource dsd : objBySubAndProp.keySet()) {
-            Set<RDFNode> objectSet = objBySubAndProp.get(dsd).get(QB_sliceKey);
-            sliceKeySet.removeAll(objectSet);
+        for (Resource dsd : sliceKeyByDSD.keySet()) {
+            Set<RDFNode> sliceKeyInDSDSet = sliceKeyByDSD.get(dsd).get(QB_sliceKey);
+            sliceKeySet.removeAll(sliceKeyInDSDSet);
         }
-        System.out.println(sliceKeySet);
+        String logMsg = "The following slice keys are not associated with DSDs: ";
+        logValidationResult(icName, sliceKeySet, logMsg);
+        return sliceKeySet;
     }
 
-    public void checkIC8() {
+    /**
+     * Validate IC-8 Slice Keys consistent with DSD: Every qb:componentProperty
+     * on a qb:SliceKey must also be declared as a qb:component of the
+     * associated qb:DataStructureDefinition.
+     * @return a set of component properties not associated with DSDs
+     */
+    public Set<RDFNode> checkIC8() {
+        String icName = "Integrity Constraint 8: Slice Keys Consistent With DSD";
+        logger.info("Validating " + icName);
         Set<RDFNode> compWithoutDSD = new HashSet<RDFNode>();
-        List<Property> dsdToProp = Arrays.asList(QB_component, QB_componentProperty);
+        List<Property> propPath = Arrays.asList(QB_component, QB_componentProperty);
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_SliceKey);
-        List<Property> compProp = Collections.singletonList(QB_componentProperty);
-        List<Property> sliceKeyProp = Collections.singletonList(QB_sliceKey);
         Set<RDFNode> propSet = new HashSet<RDFNode>();
-        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
-                searchByChildProperty(null, objByProp, compProp);
+        Map<Resource, Map<Property, Set<RDFNode>>> propBySliceKey =
+                searchByChildProperty(null, objByProp, Arrays.asList(QB_componentProperty));
         Map<Resource, Set<? extends RDFNode>> sliceKeyByDSD =
-                searchByPathVisit(null, sliceKeyProp, null);
+                searchByPathVisit(null, Arrays.asList(QB_sliceKey), null);
         for (Resource dsd : sliceKeyByDSD.keySet()) {
             Set<? extends RDFNode> sliceKeySet = sliceKeyByDSD.get(dsd);
             for (RDFNode sliceKey : sliceKeySet) {
-                propSet.addAll(objBySubAndProp
+                propSet.addAll(propBySliceKey
                         .get(sliceKey.asResource()).get(QB_componentProperty));
             }
             for (RDFNode property : propSet) {
-                if (!connectedByPropList(dsd, dsdToProp, property))
+                if (!connectedByPropList(dsd, propPath, property))
                     compWithoutDSD.add(property);
             }
         }
-        System.out.println(compWithoutDSD);
+        String logMsg = "The following component properties on slice keys are" +
+                " not associated with DSDs: ";
+        logValidationResult(icName, compWithoutDSD, logMsg);
+        return compWithoutDSD;
     }
 
-    public void checkIC9() {
+    /**
+     * Validate IC-9 Unique slice structure: Each qb:Slice must have exactly
+     * one associated qb:sliceStructure.
+     * @return a map of slices with multiple slice structures
+     */
+    public Map<Resource, Set<RDFNode>> checkIC9() {
+        String icName = "Integrity Constraint 9: Unique Slice Structure";
+        logger.info("Validating " + icName);
         Map<Resource, Set<RDFNode>> structBySlice =
                 new HashMap<Resource, Set<RDFNode>>();
         Set<Resource> sliceSet = model.listSubjectsWithProperty(RDF_type, QB_Slice).toSet();
@@ -516,25 +540,50 @@ public class Validator {
             if (sliceStructSet.size() != 1) structBySlice.put(slice,
                     sliceStructSet);
         }
-        System.out.println(structBySlice);
+        String logMsg = " is associated with the following slice structures: ";
+        logValidationResult(icName, structBySlice, logMsg);
+        return structBySlice;
     }
 
-    public void checkIC10() {
-        Map<Resource, RDFNode> dimBySliceWithoutVal = new HashMap<Resource, RDFNode>();
+    /**
+     * Validate IC-10 Slice dimensions complete: Every qb:Slice must have a
+     * value for every dimension declared in its qb:sliceStructure.
+     * @return a map of slices with a set of dimensions without values
+     */
+    public Map<Resource, Set<RDFNode>> checkIC10() {
+        String icName = "Integrity Constraint 10: Slice Dimensions Complete";
+        logger.info("Validating " + icName);
+        Map<Resource, Set<RDFNode>> dimBySliceWithoutVal = new HashMap<Resource, Set<RDFNode>>();
         List<Property> propPath = Arrays.asList(QB_sliceStructure, QB_componentProperty);
         Map<Resource, Set<? extends RDFNode>> dimBySlice = searchByPathVisit(null, propPath, null);
         for (Resource slice : dimBySlice.keySet()) {
+            Set<RDFNode> dimWithoutValSet = new HashSet<RDFNode>();
             for (RDFNode dim : dimBySlice.get(slice)) {
                 Property dimAsProp = ResourceFactory.createProperty(dim.asResource().getURI());
                 NodeIterator valIter = model.listObjectsOfProperty(slice, dimAsProp);
-                if (!valIter.hasNext()) dimBySliceWithoutVal.put(slice, dim);
+                if (!valIter.hasNext()) dimWithoutValSet.add(dim);
             }
+            if (!dimWithoutValSet.isEmpty()) dimBySliceWithoutVal.put(slice, dimWithoutValSet);
         }
-        System.out.println(dimBySliceWithoutVal);
+        String logMsg = " does not have values for the following dimensions: ";
+        logValidationResult(icName, dimBySliceWithoutVal, logMsg);
+        return dimBySliceWithoutVal;
     }
 
-    public void checkIC11_12() {
-        Map<Resource, Set<RDFNode>> faultyObservation = new HashMap<Resource, Set<RDFNode>>();
+    /**
+     * Validate IC-11 All dimensions required: Every qb:Observation has a value
+     * for each dimension declared in its associated qb:DataStructureDefinition.
+     * Validate IC-12 No duplicate observations: No two qb:Observations in the
+     * same qb:DataSet may have the same value for all dimensions.
+     * @return a map of observations with dimensions without values or with
+     * duplicate values.
+     */
+    public Map<Resource, Set<RDFNode>> checkIC11_12() {
+        String icName11 = "Integrity Constraint 11: All Dimensions Required";
+        String icName12 = "Integrity Constraint 12: No Duplicate Observations";
+        logger.info("Validating " + icName11 + " & " + icName12);
+        Map<Resource, Set<RDFNode>> faultyObs = new HashMap<Resource, Set<RDFNode>>();
+        Set<Resource> duplicateObsSet = new HashSet<Resource>();
         Map<Resource, Set<Resource>> obsByDataset =
                 new HashMap<Resource, Set<Resource>>();
         List<Property> propPath = Arrays.asList(QB_structure,
@@ -554,14 +603,36 @@ public class Validator {
         for (Resource dataset : obsByDataset.keySet()) {
             Set<Resource> obsSet = obsByDataset.get(dataset);
             Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
-            faultyObservation.putAll(dimValueCheck(obsSet, dimSet));
+            faultyObs.putAll(dimValueCheck(obsSet, dimSet));
         }
-        System.out.println(faultyObservation);
+
+        for (Resource obs : faultyObs.keySet()) {
+            if (faultyObs.get(obs).isEmpty()) duplicateObsSet.add(obs);
+        }
+        Map<Resource, Set<RDFNode>> dimSetByObsWithoutVal =
+                new HashMap<Resource, Set<RDFNode>>(faultyObs);
+        for (Resource obs : duplicateObsSet) {
+            dimSetByObsWithoutVal.remove(obs);
+        }
+        String logMsg11 = "The following observations has duplicated values: ";
+        String logMsg12 = " does not have values for the following dimensions: ";
+        logValidationResult(icName11, duplicateObsSet, logMsg11);
+        logValidationResult(icName12, dimSetByObsWithoutVal, logMsg12);
+        return faultyObs;
     }
 
+    /**
+     * This function is a subtask of function checkIC11_12 for checking the
+     * values of a set of observations for a set of dimensions.
+     * @param obsSet a set of observations
+     * @param dimSet a set of dimension properties
+     * @return a map of faulty observations with dimension property set missing
+     * corresponding values. If the set is empty then the observation is
+     * duplicated.
+     */
     private Map<Resource, Set<RDFNode>> dimValueCheck (Set<Resource> obsSet,
                                                   Set<? extends RDFNode> dimSet) {
-        Map<Resource, Set<RDFNode>> faultyObservation = new HashMap<Resource, Set<RDFNode>>();
+        Map<Resource, Set<RDFNode>> faultyObs = new HashMap<Resource, Set<RDFNode>>();
         Map<Resource, Set<RDFNode>> valueSetByObs = new HashMap<Resource, Set<RDFNode>>();
         Set<Property> dimAsPropSet = nodeToProperty(dimSet);
         for (Resource obs : obsSet) {
@@ -572,48 +643,62 @@ public class Validator {
                 if (!valueIter.hasNext()) dimWithoutValSet.add(dim);
                 else valueSet.add(valueIter.next());
             }
-            if (!dimWithoutValSet.isEmpty()) faultyObservation.put(obs, dimWithoutValSet);
+            if (!dimWithoutValSet.isEmpty()) faultyObs.put(obs, dimWithoutValSet);
             else {
-                if (valueSetByObs.containsValue(valueSet)) faultyObservation.put(obs,
+                if (valueSetByObs.containsValue(valueSet)) faultyObs.put(obs,
                         dimWithoutValSet);
                 else valueSetByObs.put(obs, valueSet);
             }
         }
-        return faultyObservation;
+        return faultyObs;
     }
 
-    public void checkIC13() {
-        Map<Resource, RDFNode> obsWithoutAttribVal = new HashMap<Resource, RDFNode>();
+    /**
+     * Validate IC-13 Required attributes: Every qb:Observation has a value for
+     * each declared attribute that is marked as required.
+     * @return a map of observations with attribute properties missing values
+     */
+    public Map<Resource, Set<RDFNode>> checkIC13() {
+        String icName = "Integrity Constraint 13: Required Attributes";
+        logger.info("Validating " + icName);
+        Map<Resource, Set<RDFNode>> obsWithoutAttribVal =
+                new HashMap<Resource, Set<RDFNode>>();
         List<Property> propPath = Arrays.asList(QB_structure, QB_component);
         Map<Resource, Set<? extends RDFNode>> compByDataset = searchByPathVisit(
                 null, propPath, null);
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(QB_componentRequired, LITERAL_TRUE);
-        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp = searchByChildProperty(null,
+        Map<Resource, Map<Property, Set<RDFNode>>> attribByComp = searchByChildProperty(null,
                 objByProp, Arrays.asList(QB_componentProperty));
         for (Resource dataset : compByDataset.keySet()) {
             Set<? extends RDFNode> compSet = compByDataset.get(dataset);
             Set<RDFNode> attribSet = new HashSet<RDFNode>();
-            compSet.retainAll(objBySubAndProp.keySet());
+            compSet.retainAll(attribByComp.keySet());
             for (RDFNode component : compSet) {
-                attribSet.addAll(objBySubAndProp.get(component.asResource())
+                attribSet.addAll(attribByComp.get(component.asResource())
                         .get(QB_componentProperty));
             }
             Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
             obsWithoutAttribVal.putAll(attribValueCheck(obsSet, attribSet));
         }
-        System.out.println(obsWithoutAttribVal);
+        String logMsg = " does not have values for the following required attributes: ";
+        logValidationResult(icName, obsWithoutAttribVal, logMsg);
+        return obsWithoutAttribVal;
     }
 
-    private Map<Resource, RDFNode> attribValueCheck (Set<Resource> obsSet,
+    private Map<Resource, Set<RDFNode>> attribValueCheck (Set<Resource> obsSet,
                                                      Set<RDFNode> attribSet) {
-        Map<Resource, RDFNode> obsWithoutAttribVal = new HashMap<Resource, RDFNode>();
+        Map<Resource, Set<RDFNode>> obsWithoutAttribVal =
+                new HashMap<Resource, Set<RDFNode>>();
         Set<Property> attribAsPropSet = nodeToProperty(attribSet);
         for (Resource obs : obsSet) {
+            Set<RDFNode> attribPropWithoutValSet = new HashSet<RDFNode>();
             for (Property attribProp : attribAsPropSet) {
                 if (!model.listObjectsOfProperty(obs, attribProp).hasNext())
-                    obsWithoutAttribVal.put(obs, attribProp);
+                    attribPropWithoutValSet.add(attribProp);
             }
+            if (!attribPropWithoutValSet.isEmpty())
+                obsWithoutAttribVal.put(obs, attribPropWithoutValSet);
         }
         return obsWithoutAttribVal;
     }
