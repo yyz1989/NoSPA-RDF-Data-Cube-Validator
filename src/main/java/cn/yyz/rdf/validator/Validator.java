@@ -331,7 +331,7 @@ public class Validator {
     /**
      * Validate IC-1 Unique DataSet: Every qb:Observation has exactly one
      * associated qb:DataSet.
-     * @return a map containing observations with multiple datasets
+     * @return a map of observations with multiple datasets
      */
     public Map<Resource, Set<RDFNode>> checkIC1() {
         String icName = "Integrity Constraint 1";
@@ -346,84 +346,124 @@ public class Validator {
                 datasetByObs.put(obs, datasetSet);
             }
         }
-        String logMsg = " is associated to datasets: ";
+        String logMsg = " is associated to the following datasets: ";
         logValidationResult(icName, datasetByObs, logMsg);
         return datasetByObs;
     }
 
-    public void checkIC2() {
-        Map<Resource, Set<Resource>> dsdByDataset =
-                new HashMap<Resource, Set<Resource>>();
-        ResIterator datasetIter = model.listSubjectsWithProperty(
-            RDF_type, QB_DataSet);
-        while (datasetIter.hasNext()) {
-            Resource dataset = datasetIter.nextResource();
-            Set dsdSet = model.listObjectsOfProperty(dataset, QB_structure).toSet();
+    /**
+     * Validate IC-2 Unique DSD: Every qb:DataSet has exactly one associated
+     * qb:DataStructureDefinition.
+     * @return a map of datasets with multiple dsds
+     */
+    public Map<Resource, Set<RDFNode>> checkIC2() {
+        String icName = "Integrity Constraint 2";
+        logger.info("Validating " + icName);
+        Map<Resource, Set<RDFNode>> dsdByDataset =
+                new HashMap<Resource, Set<RDFNode>>();
+        Set<Resource> datasetSet = model.listSubjectsWithProperty(
+            RDF_type, QB_DataSet).toSet();
+        for (Resource dataset : datasetSet) {
+            Set<RDFNode> dsdSet = model.listObjectsOfProperty(dataset, QB_structure).toSet();
             if (dsdSet.size() != 1) {
                 dsdByDataset.put(dataset, dsdSet);
             }
         }
-        System.out.println(dsdByDataset);
+        String logMsg = " is associated to the following DSDs: ";
+        logValidationResult(icName, dsdByDataset, logMsg);
+        return dsdByDataset;
     }
 
-    public void checkIC3() {
+    /**
+     * Validate IC-3 DSD includes measure: Every qb:DataStructureDefinition
+     * must include at least one declared measure.
+     * @return a set of DSDs without at least one declared measure
+     */
+    public Set<Resource> checkIC3() {
+        String icName = "Integrity Constraint 3";
+        logger.info("Validating " + icName);
         Set<Resource> dsdWithoutMeasure = new HashSet<Resource>();
-        ResIterator dsdIterator = model.listSubjectsWithProperty(RDF_type,
-                QB_DataStructureDefinition);
-        while (dsdIterator.hasNext()) {
-            Resource dsd = dsdIterator.nextResource();
+        Set<Resource> dsdSet = model.listSubjectsWithProperty(RDF_type,
+                QB_DataStructureDefinition).toSet();
+        for (Resource dsd : dsdSet) {
             Property[] properties = {QB_component, QB_componentProperty, RDF_type};
             Map<Resource, Set<? extends RDFNode>> dsdPropertyMap = searchByPathVisit(dsd,
                     Arrays.asList(properties), QB_MeasureProperty);
             if (dsdPropertyMap.get(dsd).isEmpty()) dsdWithoutMeasure.add(dsd);
         }
-        System.out.println(dsdWithoutMeasure);
+        String logMsg = "The following DSDs do not include at least one declared measure: ";
+        logValidationResult(icName, dsdWithoutMeasure, logMsg);
+        return dsdWithoutMeasure;
     }
 
-    public void checkIC4() {
-        ResIterator dimensionIterator = model.listSubjectsWithProperty(RDF_type,
-                QB_DimensionProperty);
-        ResIterator dimensionWithRangeIterator = model.listSubjectsWithProperty(
-                RDFS_range);
-        Set<Resource> dimensionWithoutRange = dimensionIterator.toSet();
-        dimensionWithoutRange.retainAll(dimensionWithRangeIterator.toSet());
-        System.out.println(dimensionWithoutRange);
+    /**
+     * Validate IC-4 Dimensions have range: Every dimension declared in a
+     * qb:DataStructureDefinition must have a declared rdfs:range.
+     * @return a set of dimensions without a declared rdfs:range
+     */
+    public Set<Resource> checkIC4() {
+        String icName = "Integrity Constraint 4";
+        logger.info("Validating " + icName);
+        Set<Resource> dimSet = model.listSubjectsWithProperty(RDF_type,
+                QB_DimensionProperty).toSet();
+        Set<Resource> dimWithRangeSet = model.listSubjectsWithProperty(
+                RDFS_range).toSet();
+        Set<Resource> dimWithoutRangeSet = new HashSet<Resource>(dimSet);
+        dimWithoutRangeSet.removeAll(dimWithRangeSet);
+        String logMsg = "The following dimensions do not have a declared rdfs:range: ";
+        logValidationResult(icName, dimWithoutRangeSet, logMsg);
+        return dimWithoutRangeSet;
     }
 
-    public void checkIC5() {
-        Set<Resource> dimensionWithoutCodelist = new HashSet<Resource>();
-        Map<Property, RDFNode> objectByProperty = new HashMap<Property, RDFNode>();
-        objectByProperty.put(RDF_type, QB_DimensionProperty);
-        objectByProperty.put(RDFS_range, SKOS_Concept);
-        Set<Resource> dimensionSet = searchByChildProperty(null, objectByProperty);
-        for (Resource dimension : dimensionSet) {
+    /**
+     * Validate IC-5 Concept dimensions have code lists: Every dimension with
+     * range skos:Concept must have a qb:codeList.
+     * @return a set of concept dimensions without code lists
+     */
+    public Set<Resource> checkIC5() {
+        String icName = "Integrity Constraint 5";
+        logger.info("Validating " + icName);
+        Set<Resource> dimWithoutCodeList = new HashSet<Resource>();
+        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
+        objByProp.put(RDF_type, QB_DimensionProperty);
+        objByProp.put(RDFS_range, SKOS_Concept);
+        Set<Resource> dimSet = searchByChildProperty(null, objByProp);
+        for (Resource dimension : dimSet) {
             NodeIterator codelistIterator = model.listObjectsOfProperty(dimension, QB_codeList);
-            if (!codelistIterator.hasNext()) dimensionWithoutCodelist.add(dimension);
+            if (!codelistIterator.hasNext()) dimWithoutCodeList.add(dimension);
         }
-        System.out.println(dimensionWithoutCodelist);
+        String logMsg = "The following concept dimensions do not have a code list: ";
+        logValidationResult(icName, dimWithoutCodeList, logMsg);
+        return dimWithoutCodeList;
     }
 
-    public void checkIC6() {
-        Set<RDFNode> componentSet = new HashSet<RDFNode>();
-        Map<Property, RDFNode> objectByProperty = new HashMap<Property, RDFNode>();
-        objectByProperty.put(QB_componentRequired, LITERAL_FALSE);
-        List<Property> propertyOnly = Collections.singletonList(QB_componentProperty);
-        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp = searchByChildProperty(
-                null, objectByProperty, propertyOnly);
-        NodeIterator compSpecIter = model.listObjectsOfProperty(QB_component);
-        while (compSpecIter.hasNext()) {
-            RDFNode compSpecNode = compSpecIter.next();
-            if (compSpecNode.isResource()) {
-                Resource compSpecRes = compSpecNode.asResource();
-                if (objBySubAndProp.containsKey(compSpecRes))
-                    componentSet.addAll(objBySubAndProp
-                            .get(compSpecRes).get(QB_componentProperty));
-            }
+    /**
+     * Validate IC-6 Only attributes may be optional: The only components of a
+     * qb:DataStructureDefinition that may be marked as optional, using
+     * qb:componentRequired are attributes.
+     * @return a set of component properties not declared as attributes
+     */
+    public Set<RDFNode> checkIC6() {
+        String icName = "Integrity Constraint 6";
+        logger.info("Validating " + icName);
+        Set<RDFNode> compPropSet = new HashSet<RDFNode>();
+        Map<Property, RDFNode> objyByProp = new HashMap<Property, RDFNode>();
+        objyByProp.put(QB_componentRequired, LITERAL_FALSE);
+        Map<Resource, Map<Property, Set<RDFNode>>> compPropByCompSpec = searchByChildProperty(
+                null, objyByProp, Arrays.asList(QB_componentProperty));
+        Set<RDFNode> compSpecSet = model.listObjectsOfProperty(QB_component).toSet();
+        compSpecSet.retainAll(compPropByCompSpec.keySet());
+        for (RDFNode compSpec : compSpecSet) {
+            Resource compSpecAsRes = compSpec.asResource();
+            compPropSet.addAll(compPropByCompSpec
+                        .get(compSpecAsRes).get(QB_componentProperty));
         }
-        ResIterator compDefIter = model.listSubjectsWithProperty(
-                RDF_type, QB_AttributeProperty);
-        componentSet.retainAll(compDefIter.toSet());
-        System.out.println(componentSet);
+        Set<Resource> AttribWithDefSet = model.listSubjectsWithProperty(
+                RDF_type, QB_AttributeProperty).toSet();
+        compPropSet.removeAll(AttribWithDefSet);
+        String logMsg = "The following component properties are not delared as attributes: ";
+        logValidationResult(icName, compPropSet, logMsg);
+        return compPropSet;
     }
 
     public void checkIC7() {
