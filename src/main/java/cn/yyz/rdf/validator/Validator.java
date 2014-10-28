@@ -614,10 +614,10 @@ public class Validator {
         for (Resource obs : duplicateObsSet) {
             dimSetByObsWithoutVal.remove(obs);
         }
-        String logMsg11 = "The following observations has duplicated values: ";
-        String logMsg12 = " does not have values for the following dimensions: ";
-        logValidationResult(icName11, duplicateObsSet, logMsg11);
-        logValidationResult(icName12, dimSetByObsWithoutVal, logMsg12);
+        String logMsg11 = " does not have values for the following dimensions: ";
+        String logMsg12 = "The following observations has duplicated values: ";
+        logValidationResult(icName11, dimSetByObsWithoutVal, logMsg11);
+        logValidationResult(icName12, duplicateObsSet, logMsg12);
         return faultyObs;
     }
 
@@ -686,6 +686,13 @@ public class Validator {
         return obsWithoutAttribVal;
     }
 
+    /**
+     * This function is a subtask of function checkIC13 for checking the values
+     * of a set of attribute properties for a set of observations.
+     * @param obsSet a set of observations
+     * @param attribSet a set of attribute properties
+     * @return a map of observations with attribute properties missing values
+     */
     private Map<Resource, Set<RDFNode>> attribValueCheck (Set<Resource> obsSet,
                                                      Set<RDFNode> attribSet) {
         Map<Resource, Set<RDFNode>> obsWithoutAttribVal =
@@ -703,8 +710,17 @@ public class Validator {
         return obsWithoutAttribVal;
     }
 
-    public void checkIC14() {
-        Map<Resource, RDFNode> obsWithoutMeasureVal = new HashMap<Resource, RDFNode>();
+    /**
+     * Validate IC-14 All measures present: In a qb:DataSet which does not use
+     * a Measure dimension then each individual qb:Observation must have a
+     * value for every declared measure.
+     * @return a map of observations with a set of measures missing values.
+     */
+    public Map<Resource, Set<RDFNode>> checkIC14() {
+        String icName = "Integrity Constraint 14: All Measures Present";
+        logger.info("Validating " + icName);
+        Map<Resource, Set<RDFNode>> obsWithoutMeasureVal =
+                new HashMap<Resource, Set<RDFNode>>();
         List<Property> propPath = Arrays.asList(QB_structure, QB_component, QB_componentProperty);
         Map<Resource, Set<? extends RDFNode>> compPropSetByDataset = searchByPathVisit(null,
                 propPath, null);
@@ -718,23 +734,49 @@ public class Validator {
             Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
             obsWithoutMeasureVal.putAll(measureValueCheck(obsSet, compPropSet));
         }
-        System.out.println(obsWithoutMeasureVal);
+        String logMsg = " does not have values for the following declared measures: ";
+        logValidationResult(icName, obsWithoutMeasureVal, logMsg);
+        return obsWithoutMeasureVal;
     }
 
-    private Map<Resource, RDFNode> measureValueCheck (Set<Resource> obsSet,
+    /**
+     * This function is a subtask of checkIC14 for checking the values of a set
+     * of measures for a set of observations.
+     * @param obsSet a set of observations
+     * @param measureSet a set of measures
+     * @return a map of observations with a set of measures missing values
+     */
+    private Map<Resource, Set<RDFNode>> measureValueCheck (Set<Resource> obsSet,
                                                       Set<? extends RDFNode> measureSet) {
-        Map<Resource, RDFNode> obsWithoutMeasureVal = new HashMap<Resource, RDFNode>();
+        Map<Resource, Set<RDFNode>> obsWithoutMeasureVal =
+                new HashMap<Resource, Set<RDFNode>>();
         Set<Property> measureAsPropSet = nodeToProperty(measureSet);
         for (Resource obs : obsSet) {
+            Set<RDFNode> measureWithoutValSet = new HashSet<RDFNode>();
             for (Property measure : measureAsPropSet) {
                 if (!model.listObjectsOfProperty(obs, measure).hasNext())
-                    obsWithoutMeasureVal.put(obs, measure);
+                    measureWithoutValSet.add(measure);
             }
+            if (!measureWithoutValSet.isEmpty())
+                obsWithoutMeasureVal.put(obs, measureWithoutValSet);
         }
         return obsWithoutMeasureVal;
     }
 
-    public void checkIC15_16() {
+    /**
+     * Validate IC-15 Measure dimension consistent: In a qb:DataSet which uses
+     * a Measure dimension then each qb:Observation must have a value for the
+     * measure corresponding to its given qb:measureType.
+     * Validate IC-16 Single measure on measure dimension observation: In a
+     * qb:DataSet which uses a Measure dimension then each qb:Observation must
+     * only have a value for one measure (by IC-15 this will be the measure
+     * corresponding to its qb:measureType).
+     * @return a map of faulty observations with measures missing values
+     */
+    public Map<Resource, Set<RDFNode>> checkIC15_16() {
+        String icName15 = "Integrity Constraint 15: Measure Dimension Consistent";
+        String icName16 = "Integrity Constraint 16: Single Measure On Measure Dimension Observation";
+        logger.info("Validating " + icName15 + " & " + icName16);
         Map<Resource, Set<RDFNode>> obsWithFaultyMeasure = new HashMap<Resource, Set<RDFNode>>();
         List<Property> propPath = Arrays.asList(QB_structure, QB_component,
                 QB_componentProperty);
@@ -750,9 +792,31 @@ public class Validator {
                 obsWithFaultyMeasure.putAll(measureTypeValueCheck(obsSet, compPropSet));
             }
         }
-        System.out.println(obsWithFaultyMeasure);
+
+        Map<Resource, Set<RDFNode>> obsWithoutMeasureVal =
+                new HashMap<Resource, Set<RDFNode>>(obsWithFaultyMeasure);
+        Map<Resource, Set<RDFNode>> obsWithMultipleMeasure =
+                new HashMap<Resource, Set<RDFNode>>(obsWithFaultyMeasure);
+        for (Resource obs : obsWithFaultyMeasure.keySet()) {
+            if (obsWithFaultyMeasure.get(obs).size() == 1)
+                obsWithMultipleMeasure.remove(obs);
+            else obsWithoutMeasureVal.remove(obs);
+        }
+        String logMsg15 = " corresponds to a wrong measure or does not have a value on: ";
+        String logMsg16 = " has the following multiple measures: ";
+        logValidationResult(icName15, obsWithoutMeasureVal, logMsg15);
+        logValidationResult(icName16, obsWithMultipleMeasure, logMsg16);
+
+        return obsWithFaultyMeasure;
     }
 
+    /**
+     * This function is a subtask of function checkIC15_16 for checking values
+     * of a set of measures for a set of observations.
+     * @param obsSet a set of observations
+     * @param measureSet a set of measures
+     * @return a map of faulty observations with measures missing values
+     */
     private Map<Resource, Set<RDFNode>> measureTypeValueCheck (Set<Resource> obsSet,
                                                                Set<? extends RDFNode> measureSet) {
         Map<Resource, Set<RDFNode>> obsWithFaultyMeasure = new HashMap<Resource, Set<RDFNode>>();
@@ -774,7 +838,18 @@ public class Validator {
         return obsWithFaultyMeasure;
     }
 
-    public void checkIC17() {
+    /**
+     * Validate IC-17 All measures present in measures dimension cube: In a
+     * qb:DataSet which uses a Measure dimension then if there is a Observation
+     * for some combination of non-measure dimensions then there must be other
+     * Observations with the same non-measure dimension values for each of the
+     * declared measures.
+     * @return a map of observations with amount of other observations with
+     * same dimension values.
+     */
+    public Map<Resource, Integer> checkIC17() {
+        String icName = "Integrity Constraint 17: All Measures Present In Measures Dimension Cube";
+        logger.info("Validating " + icName);
         Map<Resource, Integer> numObs2ByObs1 = new HashMap<Resource, Integer>();
         List<Property> propPath = Arrays.asList(QB_structure,
                 QB_component, QB_componentProperty);
@@ -809,9 +884,19 @@ public class Validator {
                     numObs2ByObs1.put(obs, numOfObs2);
             }
         }
-        System.out.println(numObs2ByObs1);
+        String logMsg = " shares the same dimension values with the following number of observations";
+        logValidationResult(icName, numObs2ByObs1, logMsg);
+        return numObs2ByObs1;
     }
 
+    /**
+     * This function is a subtask of checkIC17 for checking observations with
+     * same dimension property structure as each observation given in the set
+     * @param obsSet a set of observations
+     * @param dimPropSet a set of dimension properties
+     * @return a map of observations with a set of corresponding observations
+     * with same dimension property structure
+     */
     public Map<Resource, Set<Resource>> unqualifiedObsPairCheck (
             Set<Resource> obsSet,
             Set<? extends RDFNode> dimPropSet) {
@@ -840,7 +925,16 @@ public class Validator {
         return unqualifiedObsPair;
     }
 
-    public void checkIC18() {
+    /**
+     * Validate IC-18 Consistent dataset links: If a qb:DataSet D has a
+     * qb:slice S, and S has an qb:observation O, then the qb:dataSet
+     * corresponding to O must be D.
+     * @return a map of observations with correct datasets that should be
+     * associated to.
+     */
+    public Map<Resource, Resource> checkIC18() {
+        String icName = "Integrity Constraint 18: Consistent Dataset Links";
+        logger.info("Validating " + icName);
         Map<Resource, Resource> obsNotInDataset = new HashMap<Resource, Resource>();
         Property[] properties = {QB_slice, QB_observation};
         Map<Resource, Set<? extends RDFNode>> obsByDataset = searchByPathVisit(null,
@@ -853,10 +947,21 @@ public class Validator {
                     obsNotInDataset.put(obsAsRes, dataset);
             }
         }
-        System.out.println(obsNotInDataset);
+        String logMsg = " should be associated to the following dataset: ";
+        logValidationResult(icName, obsNotInDataset, logMsg);
+        return obsNotInDataset;
     }
 
-    public void checkIC19() {
+    /**
+     * Validate IC-19 Codes from code list: If a dimension property has a
+     * qb:codeList, then the value of the dimension property on every
+     * qb:Observation must be in the code list.
+     * @return a map of observations with a set of dimensions associated
+     * with values not in the code list
+     */
+    public Map<Resource, Set<RDFNode>> checkIC19() {
+        String icName = "Integrity Constraint 19: Codes From Code List";
+        logger.info("Validating " + icName);
         Map<Resource, Set<RDFNode>> dimValIsNotCode = new HashMap<Resource, Set<RDFNode>>();
         Map<RDFNode, Set<? extends RDFNode>> conceptCLByDim =
                 new HashMap<RDFNode, Set<? extends RDFNode>>();
@@ -887,9 +992,22 @@ public class Validator {
             dimValIsNotCode.putAll(obsWithFaultyDimCheck(obsSet, conceptCLByDim,
                     collectionCLByDim));
         }
-        System.out.println(dimValIsNotCode);
+        String logMsg = " does not have values in the code lists for the following dimensions: ";
+        logValidationResult(icName, dimValIsNotCode, logMsg);
+        return dimValIsNotCode;
     }
 
+    /**
+     * This function is a subtask of function checkIC19 to check if the
+     * dimension values of a set of observations match the given code lists
+     * @param obsSet a set of observations
+     * @param conceptCLByDim a map of dimensions with corresponding code lists
+     *                       of the ConceptScheme type
+     * @param collectionCLByDim a map of dimensions with corresponding code
+     *                          lists of the Collection type
+     * @return a map of observations with a set of dimensions associated with
+     * values not in the code list
+     */
     private Map<Resource, Set<RDFNode>> obsWithFaultyDimCheck (Set<Resource> obsSet,
             Map<RDFNode, Set<? extends RDFNode>> conceptCLByDim,
             Map<RDFNode, Set<? extends RDFNode>> collectionCLByDim) {
@@ -897,29 +1015,51 @@ public class Validator {
         Set<Property> dimWithConcept = nodeToProperty(conceptCLByDim.keySet());
         Set<Property> dimWithCollection = nodeToProperty(collectionCLByDim.keySet());
         for (Resource obs : obsSet) {
-            Set<RDFNode> fautyDimSet = new HashSet<RDFNode>();
-            fautyDimSet.addAll(dimValueCheck(true, obs, dimWithConcept, conceptCLByDim));
-            fautyDimSet.addAll(dimValueCheck(false, obs, dimWithCollection, collectionCLByDim));
-            if (fautyDimSet.size() != 0) dimValIsNotCode.put(obs, fautyDimSet);
+            Set<RDFNode> unqualifiedDimSet = new HashSet<RDFNode>();
+            unqualifiedDimSet.addAll(dimValueCheck(true, obs, dimWithConcept, conceptCLByDim));
+            unqualifiedDimSet.addAll(dimValueCheck(false, obs, dimWithCollection, collectionCLByDim));
+            if (unqualifiedDimSet.size() != 0) dimValIsNotCode.put(obs, unqualifiedDimSet);
         }
         return dimValIsNotCode;
     }
 
+    /**
+     * This function is a subtask of function checkIC19 to check if the
+     * properties of an observation have values matching one of the given
+     * code lists.
+     * @param isConceptList indicates the type of code list, true for Concept
+     *                      Scheme and false for Collection.
+     * @param obs an observation
+     * @param dimAsPropSet a set of properties of the given observation
+     * @param codeListByDim a set of candidate code lists for the given
+     *                      properties
+     * @return a set of unqualified dimensions
+     */
     private Set<RDFNode> dimValueCheck (boolean isConceptList, Resource obs, Set<Property> dimAsPropSet,
                          Map<RDFNode, Set<? extends RDFNode>> codeListByDim) {
-        Set<RDFNode> fautyDimSet = new HashSet<RDFNode>();
+        Set<RDFNode> unqualifiedDimSet = new HashSet<RDFNode>();
         for (Property dimAsProp : dimAsPropSet) {
             Set<RDFNode> valueSet = model.listObjectsOfProperty(obs, dimAsProp).toSet();
             if (valueSet.size() == 1) {
                 RDFNode value = valueSet.iterator().next();
                 if (!value.isURIResource() || !connectedToCodeList(isConceptList,
                         value.asResource(), codeListByDim.get(dimAsProp)))
-                    fautyDimSet.add(dimAsProp);
+                    unqualifiedDimSet.add(dimAsProp);
             }
         }
-        return fautyDimSet;
+        return unqualifiedDimSet;
     }
 
+    /**
+     * This function is a subtask of function checkIC19 to check if the given
+     * value is included in a code list.
+     * @param isConceptList indicates the type of code list, true for Concept
+     *                      Scheme and false for Collection.
+     * @param value value of a dimension property
+     * @param codeListSet a set of candidate code lists
+     * @return a boolean value indicating if the value is included in a code
+     * list
+     */
     private boolean connectedToCodeList (boolean isConceptList, Resource value,
                                          Set<? extends RDFNode> codeListSet) {
         boolean isConnected = false;
@@ -935,14 +1075,34 @@ public class Validator {
         return isConnected;
     }
 
-    public void checkIC20_21 () {
+    /**
+     * Validate IC-20 Codes from hierarchy: If a dimension property has a
+     * qb:HierarchicalCodeList with a non-blank qb:parentChildProperty then
+     * the value of that dimension property on every qb:Observation must be
+     * reachable from a root of the hierarchy using zero or more hops along
+     * the qb:parentChildProperty links.
+     * Validate IC-21 Codes from hierarchy (inverse): If a dimension property
+     * has a qb:HierarchicalCodeList with an inverse qb:parentChildProperty
+     * then the value of that dimension property on every qb:Observation must
+     * be reachable from a root of the hierarchy using zero or more hops along
+     * the inverse qb:parentChildProperty links.
+     * @return a list of two maps containing observations with dimension values
+     * not connected to hierarchical code lists, along both direct and inverse
+     * links
+     */
+    public List<Map<Resource, Set<RDFNode>>> checkIC20_21 () {
+        String icName20 = "Integrity Constraint 20: Codes From Hierarchy";
+        String icName21 = "Integrity Constraint 20: Codes From Hierarchy (Inverse)";
+        logger.info("Validating " + icName20 + " & " +icName21);
         Map<Resource, Set<RDFNode>> dimSetByObsNotConByDirPcp =
                 new HashMap<Resource, Set<RDFNode>>();
         Map<Resource, Set<RDFNode>> dimSetByObsNotConByInvPcp =
                 new HashMap<Resource, Set<RDFNode>>();
+        List<Map<Resource, Set<RDFNode>>> dimSetByObsNotConByPcp =
+                new ArrayList<Map<Resource, Set<RDFNode>>>();
         Map<Resource, Map<String, Set<Property>>> pcpByCodeList = getPcpByCodeList();
         if (pcpByCodeList.isEmpty()) {
-            return;
+            return dimSetByObsNotConByPcp;
         }
         Set<Resource> codeListWithDefSet = model.listResourcesWithProperty(RDF_type,
                 QB_HierarchicalCodeList).toSet();
@@ -968,8 +1128,13 @@ public class Validator {
             dimSetByObsNotConByInvPcp.putAll(
                     obsSetPcpCheck("INVERSE", obsSet, codeListByDim, pcpByCodeList));
         }
-        System.out.println(dimSetByObsNotConByDirPcp.size());
-        System.out.println(dimSetByObsNotConByInvPcp.size());
+        dimSetByObsNotConByPcp.add(dimSetByObsNotConByDirPcp);
+        dimSetByObsNotConByPcp.add(dimSetByObsNotConByInvPcp);
+        String logMsg20 = " has values for the following dimensions not reachable along a direct link path: ";
+        String logMsg21 = " has values for the following dimensions not reachable along an inverse link path: ";
+        logValidationResult(icName20, dimSetByObsNotConByDirPcp, logMsg20);
+        logValidationResult(icName21, dimSetByObsNotConByInvPcp, logMsg21);
+        return dimSetByObsNotConByPcp;
     }
 
     public Map<Resource, Set<RDFNode>> obsSetPcpCheck (String direction,
@@ -1242,7 +1407,7 @@ public class Validator {
     }
 
     private <K, V> void logValidationResult (String icName,
-                            Map<K, Set<V>> map, String msg) {
+                            Map<K, V> map, String msg) {
         logger.debug(icName);
         logger.debug(new String(new char[icName.length()]).replace("\0", "-"));
         logger.debug("");
@@ -1250,9 +1415,14 @@ public class Validator {
         else {
             for (K key : map.keySet()) {
                 logger.debug(key.toString() + msg);
-                for (V nodeInSet : map.get(key)) {
-                    logger.debug("    " + nodeInSet.toString());
+                V value = map.get(key);
+                if (value instanceof Set) {
+                    for (Object obj : (Set) value) {
+                        logger.debug("    " + obj.toString());
+                    }
                 }
+                else
+                    logger.debug("    " + value.toString());
             }
         }
         logger.debug("");
