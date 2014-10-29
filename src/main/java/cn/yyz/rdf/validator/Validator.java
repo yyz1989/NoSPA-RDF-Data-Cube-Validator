@@ -4,6 +4,7 @@ import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.*;
 import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
+import com.hp.hpl.jena.vocabulary.RDF;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -965,13 +966,13 @@ public class Validator {
      * Validate IC-19 Codes from code list: If a dimension property has a
      * qb:codeList, then the value of the dimension property on every
      * qb:Observation must be in the code list.
-     * @return a map of observations with a set of dimensions associated
-     * with values not in the code list
+     * @return a map of values with a set of code lists not including the
+     * values
      */
-    public Map<Resource, Set<RDFNode>> checkIC19() {
+    public Map<RDFNode, Set<RDFNode>> checkIC19() {
         String icName = "Integrity Constraint 19: Codes From Code List";
         logger.info("Validating " + icName);
-        Map<Resource, Set<RDFNode>> dimValIsNotCode = new HashMap<Resource, Set<RDFNode>>();
+        Map<RDFNode, Set<RDFNode>> valNotInCodeList = new HashMap<RDFNode, Set<RDFNode>>();
         Map<RDFNode, Set<? extends RDFNode>> conceptCLByDim =
                 new HashMap<RDFNode, Set<? extends RDFNode>>();
         Map<RDFNode, Set<? extends RDFNode>> collectionCLByDim =
@@ -998,12 +999,12 @@ public class Validator {
                 if (!conceptCLSet.isEmpty()) conceptCLByDim.put(dim, conceptCLSet);
                 if (!collectionCLSet.isEmpty()) collectionCLByDim.put(dim, collectionCLSet);
             }
-            dimValIsNotCode.putAll(obsWithFaultyDimCheck(obsSet, conceptCLByDim,
+            valNotInCodeList.putAll(obsWithFaultyDimCheck(obsSet, conceptCLByDim,
                     collectionCLByDim));
         }
-        String logMsg = " does not have values in the code lists for the following dimensions: ";
-        logValidationResult(icName, dimValIsNotCode, logMsg);
-        return dimValIsNotCode;
+        String logMsg = " is not included in the following code lists: ";
+        logValidationResult(icName, valNotInCodeList, logMsg);
+        return valNotInCodeList;
     }
 
     /**
@@ -1014,49 +1015,75 @@ public class Validator {
      *                       of the ConceptScheme type
      * @param collectionCLByDim a map of dimensions with corresponding code
      *                          lists of the Collection type
-     * @return a map of observations with a set of dimensions associated with
-     * values not in the code list
+     * @return a map of values with a set of code lists not including the
+     * values
      */
-    private Map<Resource, Set<RDFNode>> obsWithFaultyDimCheck (Set<Resource> obsSet,
+    private Map<RDFNode, Set<RDFNode>> obsWithFaultyDimCheck (Set<Resource> obsSet,
             Map<RDFNode, Set<? extends RDFNode>> conceptCLByDim,
             Map<RDFNode, Set<? extends RDFNode>> collectionCLByDim) {
-        Map<Resource, Set<RDFNode>> dimValIsNotCode = new HashMap<Resource, Set<RDFNode>>();
+        Map<RDFNode, Set<RDFNode>> valNotInCodeList = new HashMap<RDFNode, Set<RDFNode>>();
         Set<Property> dimWithConcept = nodeToProperty(conceptCLByDim.keySet());
         Set<Property> dimWithCollection = nodeToProperty(collectionCLByDim.keySet());
         for (Resource obs : obsSet) {
-            Set<RDFNode> unqualifiedDimSet = new HashSet<RDFNode>();
-            unqualifiedDimSet.addAll(dimValueCheck(true, obs, dimWithConcept, conceptCLByDim));
-            unqualifiedDimSet.addAll(dimValueCheck(false, obs, dimWithCollection, collectionCLByDim));
-            if (unqualifiedDimSet.size() != 0) dimValIsNotCode.put(obs, unqualifiedDimSet);
+            Map<RDFNode, Set<RDFNode>> valNotInConceptCL =
+                    dimValueCheck(true, obs, dimWithConcept, conceptCLByDim);
+            Map<RDFNode, Set<RDFNode>> valNotInCollectionCL =
+                    dimValueCheck(false, obs, dimWithCollection, collectionCLByDim);
+            for (RDFNode value : valNotInConceptCL.keySet()) {
+                if (valNotInCodeList.containsKey(value)) {
+                    Set<RDFNode> codeList = valNotInCodeList.get(value);
+                    codeList.addAll(valNotInConceptCL.get(value));
+                    valNotInCodeList.put(value, codeList);
+                }
+                else valNotInCodeList.put(value, valNotInConceptCL.get(value));
+            }
+            for (RDFNode value : valNotInCollectionCL.keySet()) {
+                if (valNotInCodeList.containsKey(value)) {
+                    Set<RDFNode> codeList = valNotInCodeList.get(value);
+                    codeList.addAll(valNotInCollectionCL.get(value));
+                    valNotInCodeList.put(value, codeList);
+                }
+                else valNotInCodeList.put(value, valNotInCollectionCL.get(value));
+            }
         }
-        return dimValIsNotCode;
+        return valNotInCodeList;
     }
 
     /**
      * This function is a subtask of function checkIC19 to check if the
-     * properties of an observation have values matching one of the given
-     * code lists.
+     * dimension values of an observation matches one of the given code lists
      * @param isConceptList indicates the type of code list, true for Concept
      *                      Scheme and false for Collection.
      * @param obs an observation
      * @param dimAsPropSet a set of properties of the given observation
      * @param codeListByDim a set of candidate code lists for the given
      *                      properties
-     * @return a set of unqualified dimensions
+     * @return a map of values with a set of code lists not including the
+     * values
      */
-    private Set<RDFNode> dimValueCheck (boolean isConceptList, Resource obs, Set<Property> dimAsPropSet,
-                         Map<RDFNode, Set<? extends RDFNode>> codeListByDim) {
-        Set<RDFNode> unqualifiedDimSet = new HashSet<RDFNode>();
+    private Map<RDFNode, Set<RDFNode>> dimValueCheck (boolean isConceptList,
+                Resource obs, Set<Property> dimAsPropSet,
+                Map<RDFNode, Set<? extends RDFNode>> codeListByDim) {
+        Map<RDFNode, Set<RDFNode>> valNotInCodeList = new HashMap<RDFNode, Set<RDFNode>>();
         for (Property dimAsProp : dimAsPropSet) {
             Set<RDFNode> valueSet = model.listObjectsOfProperty(obs, dimAsProp).toSet();
             if (valueSet.size() == 1) {
                 RDFNode value = valueSet.iterator().next();
+                Set<RDFNode> codeList = new HashSet<RDFNode>();
+                codeList.addAll(codeListByDim.get(dimAsProp));
                 if (!value.isURIResource() || !connectedToCodeList(isConceptList,
-                        value.asResource(), codeListByDim.get(dimAsProp)))
-                    unqualifiedDimSet.add(dimAsProp);
+                        value.asResource(), codeList)) {
+                    if (valNotInCodeList.containsKey(value)) {
+                        Set<RDFNode> cl = valNotInCodeList.get(value);
+                        cl.addAll(codeList);
+                        valNotInCodeList.put(value, cl);
+                    } else {
+                        valNotInCodeList.put(value, codeList);
+                    }
+                }
             }
         }
-        return unqualifiedDimSet;
+        return valNotInCodeList;
     }
 
     /**
