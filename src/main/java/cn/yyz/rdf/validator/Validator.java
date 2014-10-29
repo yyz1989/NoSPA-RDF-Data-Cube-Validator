@@ -154,7 +154,7 @@ public class Validator {
                 Arrays.asList(QB_structure, QB_component), null);
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(QB_componentAttachment, QB_DataSet);
-        Map<Resource, Map<Property, Set<RDFNode>>> compBySpec = searchByChildProperty(null,
+        Map<Resource, Map<Property, Set<RDFNode>>> compBySpec = searchByMultipleProperty(null,
                 objByProp, Arrays.asList(QB_componentProperty));
         for (Resource dataset : specSetByDataset.keySet()) {
             Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
@@ -185,7 +185,7 @@ public class Validator {
                 Arrays.asList(QB_structure, QB_component), null);
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(QB_componentAttachment, QB_Slice);
-        Map<Resource, Map<Property, Set<RDFNode>>> compBySpec = searchByChildProperty(null,
+        Map<Resource, Map<Property, Set<RDFNode>>> compBySpec = searchByMultipleProperty(null,
                 objByProp, Arrays.asList(QB_componentProperty));
         for (Resource dataset : specSetByDataset.keySet()) {
             Set<? extends RDFNode> specSet = specSetByDataset.get(dataset);
@@ -300,7 +300,7 @@ public class Validator {
         objByProp.put(RDF_type, QB_DataSet);
         List<Property> propertySet = Collections.singletonList(QB_structure);
         Map<Resource, Map<Property, Set<RDFNode>>> dsdByDatasetAndStructure =
-                searchByChildProperty(null, objByProp, propertySet);
+                searchByMultipleProperty(null, objByProp, propertySet);
         for (Resource dataset : dsdByDatasetAndStructure.keySet()) {
             Map<Property, Set<RDFNode>> dsdByStructure =
                     dsdByDatasetAndStructure.get(dataset);
@@ -436,7 +436,7 @@ public class Validator {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_DimensionProperty);
         objByProp.put(RDFS_range, SKOS_Concept);
-        Set<Resource> dimSet = searchByChildProperty(null, objByProp);
+        Set<Resource> dimSet = searchByMultipleProperty(null, objByProp);
         for (Resource dimension : dimSet) {
             NodeIterator codelistIterator = model.listObjectsOfProperty(dimension, QB_codeList);
             if (!codelistIterator.hasNext()) dimWithoutCodeList.add(dimension);
@@ -458,7 +458,7 @@ public class Validator {
         Set<RDFNode> compPropSet = new HashSet<RDFNode>();
         Map<Property, RDFNode> objyByProp = new HashMap<Property, RDFNode>();
         objyByProp.put(QB_componentRequired, LITERAL_FALSE);
-        Map<Resource, Map<Property, Set<RDFNode>>> compPropByCompSpec = searchByChildProperty(
+        Map<Resource, Map<Property, Set<RDFNode>>> compPropByCompSpec = searchByMultipleProperty(
                 null, objyByProp, Arrays.asList(QB_componentProperty));
         Set<RDFNode> compSpecSet = model.listObjectsOfProperty(QB_component).toSet();
         compSpecSet.retainAll(compPropByCompSpec.keySet());
@@ -486,7 +486,7 @@ public class Validator {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_DataStructureDefinition);
         Map<Resource, Map<Property, Set<RDFNode>>> sliceKeyByDSD =
-                searchByChildProperty(null, objByProp, Arrays.asList(QB_sliceKey));
+                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_sliceKey));
         Set<Resource> sliceKeySet = model.listSubjectsWithProperty(RDF_type, QB_SliceKey).toSet();
         for (Resource dsd : sliceKeyByDSD.keySet()) {
             Set<RDFNode> sliceKeyInDSDSet = sliceKeyByDSD.get(dsd).get(QB_sliceKey);
@@ -512,7 +512,7 @@ public class Validator {
         objByProp.put(RDF_type, QB_SliceKey);
         Set<RDFNode> propSet = new HashSet<RDFNode>();
         Map<Resource, Map<Property, Set<RDFNode>>> propBySliceKey =
-                searchByChildProperty(null, objByProp, Arrays.asList(QB_componentProperty));
+                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_componentProperty));
         Map<Resource, Set<? extends RDFNode>> sliceKeyByDSD =
                 searchByPathVisit(null, Arrays.asList(QB_sliceKey), null);
         for (Resource dsd : sliceKeyByDSD.keySet()) {
@@ -677,7 +677,7 @@ public class Validator {
                 null, propPath, null);
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(QB_componentRequired, LITERAL_TRUE);
-        Map<Resource, Map<Property, Set<RDFNode>>> attribByComp = searchByChildProperty(null,
+        Map<Resource, Map<Property, Set<RDFNode>>> attribByComp = searchByMultipleProperty(null,
                 objByProp, Arrays.asList(QB_componentProperty));
         for (Resource dataset : compByDataset.keySet()) {
             Set<? extends RDFNode> compSet = compByDataset.get(dataset);
@@ -985,7 +985,7 @@ public class Validator {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_DimensionProperty);
         Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
-                searchByChildProperty(null, objByProp, Arrays.asList(QB_codeList));
+                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_codeList));
         for (Resource dataset : dimByDataset.keySet()) {
             Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
             Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
@@ -1101,7 +1101,7 @@ public class Validator {
      */
     public List<Map<Resource, Set<RDFNode>>> checkIC20_21 () {
         String icName20 = "Integrity Constraint 20: Codes From Hierarchy";
-        String icName21 = "Integrity Constraint 20: Codes From Hierarchy (Inverse)";
+        String icName21 = "Integrity Constraint 21: Codes From Hierarchy (Inverse)";
         logger.info("Validating " + icName20 + " & " +icName21);
         Map<Resource, Set<RDFNode>> dimSetByObsNotConByDirPcp =
                 new HashMap<Resource, Set<RDFNode>>();
@@ -1120,7 +1120,7 @@ public class Validator {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_DimensionProperty);
         Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
-                searchByChildProperty(null, objByProp, Arrays.asList(QB_codeList));
+                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_codeList));
         for (Resource dataset : dimByDataset.keySet()) {
             Map<Property, Set<RDFNode>> codeListByDim = new HashMap<Property, Set<RDFNode>>();
             Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
@@ -1244,7 +1244,7 @@ public class Validator {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_HierarchicalCodeList);
         Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
-                searchByChildProperty(null, objByProp, Arrays.asList(QB_parentChildProperty));
+                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_parentChildProperty));
         for (Resource codeList : objBySubAndProp.keySet()) {
             Set<RDFNode> pcpNodeSet =
                     objBySubAndProp.get(codeList).get(QB_parentChildProperty);
@@ -1419,25 +1419,26 @@ public class Validator {
     }
 
     /**
-     * Searches resources and their corresponding values connected by a
-     * property path (e.g.,
-     * ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim)
-     * @param subject
-     * @param objectByProperty
-     * @return
+     * Searches resources with multiple properties and corresponding values
+     * (e.g.,
+     * ?obs a qb:Observation
+     *      qb:dataSet eg:ds1 )
+     * @param subject an RDF resource
+     * @param objByProp a map of properties with corresponding values
+     * @return a set of qualified resources
      */
-    private Set<Resource> searchByChildProperty(Resource subject,
-                                                Map<Property, RDFNode> objectByProperty) {
+    private Set<Resource> searchByMultipleProperty(Resource subject,
+                                                   Map<Property, RDFNode> objByProp) {
         Set<Resource> resultSet = new HashSet<Resource>();
-        for (Property property : objectByProperty.keySet()) {
-            if (objectByProperty.get(property) == null) objectByProperty.remove(property);
+        for (Property property : objByProp.keySet()) {
+            if (objByProp.get(property) == null) objByProp.remove(property);
         }
-        if (objectByProperty.size() == 0) return resultSet;
-        Property seedKey = objectByProperty.keySet().iterator().next();
-        RDFNode seedValue = objectByProperty.remove(seedKey);
+        if (objByProp.size() == 0) return resultSet;
+        Property seedKey = objByProp.keySet().iterator().next();
+        RDFNode seedValue = objByProp.remove(seedKey);
         Set<Resource> subjectSet = model.listSubjectsWithProperty(seedKey, seedValue).toSet();
-        for (Property property : objectByProperty.keySet()) {
-            RDFNode object = objectByProperty.get(property);
+        for (Property property : objByProp.keySet()) {
+            RDFNode object = objByProp.get(property);
             ResIterator subjectIter = model.listSubjectsWithProperty(property, object);
             subjectSet.retainAll(subjectIter.toSet());
         }
@@ -1449,15 +1450,30 @@ public class Validator {
         else return subjectSet;
     }
 
-    private Map<Resource, Map<Property, Set<RDFNode>>> searchByChildProperty(Resource subject,
-           Map<Property, RDFNode> objectByProperty, List<Property> propertyOnlyList) {
+    /**
+     * Searches resources and corresponding values with multiple properties
+     * (e.g.,
+     * ?obs a qb:Observation
+     *      eg:dim1 eg:val1
+     *      eg:dim2 eg:val2
+     *      eg:dim3 ?val3
+     *      eg:dim4 ?val4 )
+     * @param subject an RDF resource
+     * @param objByProp a map of properties with corresponding values
+     * @param propWithoutVal a list of properties of which the values are
+     *                           not given
+     * @return a map of resources with a map of properties and corresponding
+     * values
+     */
+    private Map<Resource, Map<Property, Set<RDFNode>>> searchByMultipleProperty(Resource subject,
+            Map<Property, RDFNode> objByProp, List<Property> propWithoutVal) {
         Map<Resource, Map<Property, Set<RDFNode>>> resultSet =
                 new HashMap<Resource, Map<Property, Set<RDFNode>>>();
-        Set<Resource> subjectSet = searchByChildProperty(subject, objectByProperty);
+        Set<Resource> subjectSet = searchByMultipleProperty(subject, objByProp);
         for (Resource resultSubject : subjectSet) {
             Map<Property, Set<RDFNode>> objectSetByProperty =
                     new HashMap<Property, Set<RDFNode>>();
-            for (Property property : propertyOnlyList) {
+            for (Property property : propWithoutVal) {
                 Set<RDFNode> objectSet = searchObjectsOfProperty(
                         Collections.singleton(resultSubject), property);
                 objectSetByProperty.put(property, objectSet);

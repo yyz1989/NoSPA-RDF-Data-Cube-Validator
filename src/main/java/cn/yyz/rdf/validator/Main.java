@@ -1,16 +1,10 @@
 package cn.yyz.rdf.validator;
 
-import com.hp.hpl.jena.update.UpdateAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashSet;
 import java.util.Properties;
-import java.util.Set;
 
 /**
  * Created by yyz on 9/26/14.
@@ -39,7 +33,7 @@ public class Main {
         long t1 = System.currentTimeMillis();
         //validator.normalizeBySparql();
         long t2 = System.currentTimeMillis();
-        //validator.checkIC19();
+        validator.checkICAll();
         long t3 = System.currentTimeMillis();
 
         //validator.exportModel(outputPath, outputFormat);
