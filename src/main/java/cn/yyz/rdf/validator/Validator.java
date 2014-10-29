@@ -1258,6 +1258,15 @@ public class Validator {
         return pcpByCodeList;
     }
 
+    /**
+     * Checks if a subject is connected to an object through a list of
+     * properties
+     * @param subject an RDF resource
+     * @param fixPropList a list of properties representing the property path
+     * @param object a candidate value associated to the resource through the
+     *               given property path
+     * @return a boolean value indicating if they are connected
+     */
     private boolean connectedByPropList(Resource subject,
                                         List<Property> fixPropList, RDFNode object) {
         boolean isConnected = false;
@@ -1269,8 +1278,21 @@ public class Validator {
         return isConnected;
     }
 
+    /**
+     * Checks if a subject is connected to an object through a list of
+     * properties and a repetitive property
+     * @param subject an RDF resource
+     * @param fixPropList a list of properties representing the property path
+     * @param repProp a property that could be repeated for multiple times
+     *                appending to the end of the property path
+     * @param object a candidate value associated to the resource through the
+     *               given property path
+     * @param isDirect indicate the direction of the property path (direct or
+     *                 inverse)
+     * @return a boolean value indicating if they are connected
+     */
     private boolean connectedByRepeatedProp(Resource subject, List<Property> fixPropList,
-                                            Property variableProp, RDFNode object,
+                                            Property repProp, RDFNode object,
                                             boolean isDirect) {
         boolean isConnected = false;
         Map<Resource, Set<? extends RDFNode>> objSetBySub = searchByPathVisit(subject,
@@ -1278,7 +1300,7 @@ public class Validator {
         Set<? extends RDFNode> objectSet = objSetBySub.get(subject);
         for (RDFNode objOfPropPath : objectSet) {
             if (connectedByRepeatedProp(objOfPropPath.asResource(),
-                    variableProp, object, isDirect)) {
+                    repProp, object, isDirect)) {
                 isConnected = true;
                 break;
             }
@@ -1286,44 +1308,77 @@ public class Validator {
         return isConnected;
     }
 
-    private boolean connectedByRepeatedProp(Resource subject, Property variableProp,
+    /**
+     * Checks if a subject is connected to an object through a repetitive
+     * property
+     * @param subject an RDF resource
+     * @param repProp a property that could be repeated for multiple times
+     *                appending to the end of the fix property list
+     * @param object a candidate value associated to the resource through the
+     *               given property path
+     * @param isDirect indicate the direction of the property path (direct or
+     *                 inverse)
+     * @return a boolean value indicating if they are connected
+     */
+    private boolean connectedByRepeatedProp(Resource subject, Property repProp,
                                             RDFNode object, boolean isDirect) {
-        if (isDirect) return connectedByRepeatedProp(subject, variableProp, object);
-        else return connectedByRepeatedProp(object.asResource(), variableProp, subject);
+        if (isDirect) return connectedByRepeatedProp(subject, repProp, object);
+        else return connectedByRepeatedProp(object.asResource(), repProp, subject);
     }
 
-    private boolean connectedByRepeatedProp(Resource subject, Property variableProp,
+    /**
+     * Checks if a subject is connected to an object through a repetitive
+     * property
+     * @param subject an RDF resource
+     * @param repProp a property that could be repeated for multiple times
+     *                appending to the end of the fix property list
+     * @param object a candidate value associated to the resource through the
+     *               given property path
+     * @return a boolean value indicating if they are connected
+     */
+    private boolean connectedByRepeatedProp(Resource subject, Property repProp,
                                             RDFNode object) {
         boolean isConnected = false;
         Set<RDFNode> objectSet = searchObjectsOfProperty(Collections.singleton(subject),
-                variableProp);
+                repProp);
         while (!objectSet.isEmpty()) {
             if (objectSet.contains(object)) {
                 isConnected = true;
                 break;
             }
-            else objectSet = searchObjectsOfProperty(nodeToResource(objectSet), variableProp);
+            else objectSet = searchObjectsOfProperty(nodeToResource(objectSet), repProp);
         }
         return isConnected;
     }
 
+    /**
+     * Searches resources and their corresponding values connected by a
+     * property path (e.g.,
+     * ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim)
+     * @param subject an RDF resource
+     * @param propPath a list of properties representing the property path
+     * @param object a candidate value associated to the resource through the
+     *               given property path
+     * @return a map of resources with corresponding values of the given
+     * property path
+     */
     private Map<Resource, Set<? extends RDFNode>> searchByPathVisit(
-            Resource subject, List<Property> properties, Resource object) {
+            Resource subject, List<Property> propPath, Resource object) {
         Map<Resource, Set<? extends RDFNode>> resultSet =
                 new HashMap<Resource, Set<? extends RDFNode>>();
-        if (properties.size() == 0) return resultSet;
+        if (propPath.size() == 0) return resultSet;
         Set<Resource> resourceSet = new HashSet<Resource>();
         Set<RDFNode> nodeSet = new HashSet<RDFNode>();
 
         // case: eg:obs1 qb:dataSet ?dataset
         if (subject != null) {
             NodeIterator objectIter = model.listObjectsOfProperty(subject,
-                    properties.get(0));
+                    propPath.get(0));
             while (objectIter.hasNext()) {
                 resourceSet.add(objectIter.next().asResource());
             }
-            for (int index = 1; index < properties.size(); index++) {
-                nodeSet = searchObjectsOfProperty(resourceSet, properties.get(index));
+            for (int index = 1; index < propPath.size(); index++) {
+                nodeSet = searchObjectsOfProperty(resourceSet, propPath.get(index));
             }
             if (object != null) nodeSet.retainAll(Collections.singleton(object));
             resultSet.put(subject, nodeSet);
@@ -1331,22 +1386,22 @@ public class Validator {
 
         // case: ?obs qb:dataSet eg:dataset1
         else if (subject == null && object !=null) {
-            ResIterator subjectIter = model.listSubjectsWithProperty(properties.get(0),
+            ResIterator subjectIter = model.listSubjectsWithProperty(propPath.get(0),
                     object);
             resourceSet = subjectIter.toSet();
-            for (int index = 1; index < properties.size(); index++) {
-                resourceSet = searchSubjectsWithProperty(resourceSet, properties.get(index));
+            for (int index = 1; index < propPath.size(); index++) {
+                resourceSet = searchSubjectsWithProperty(resourceSet, propPath.get(index));
             }
             resultSet.put(object, resourceSet);
         }
 
         // case: ?obs qb:dataSet ?dataset
         else if (subject == null && object == null) {
-            ResIterator subjectIter = model.listSubjectsWithProperty(properties.get(0));
+            ResIterator subjectIter = model.listSubjectsWithProperty(propPath.get(0));
             for (Resource sub : subjectIter.toSet()) {
-                nodeSet = searchObjectsOfProperty(Collections.singleton(sub), properties.get(0));
-                for (int index = 1; index < properties.size(); index++) {
-                    nodeSet = searchObjectsOfProperty(nodeToResource(nodeSet), properties.get(index));
+                nodeSet = searchObjectsOfProperty(Collections.singleton(sub), propPath.get(0));
+                for (int index = 1; index < propPath.size(); index++) {
+                    nodeSet = searchObjectsOfProperty(nodeToResource(nodeSet), propPath.get(index));
                 }
                 resultSet.put(sub, nodeSet);
             }
@@ -1354,6 +1409,14 @@ public class Validator {
         return resultSet;
     }
 
+    /**
+     * Searches resources and their corresponding values connected by a
+     * property path (e.g.,
+     * ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim)
+     * @param subject
+     * @param objectByProperty
+     * @return
+     */
     private Set<Resource> searchByChildProperty(Resource subject,
                                                 Map<Property, RDFNode> objectByProperty) {
         Set<Resource> resultSet = new HashSet<Resource>();
@@ -1395,6 +1458,12 @@ public class Validator {
         return resultSet;
     }
 
+    /**
+     * Searches objects of a property given a set of subjects
+     * @param subjectSet a set of subjects
+     * @param property a property
+     * @return a set of objects
+     */
     private Set<RDFNode> searchObjectsOfProperty(Set<Resource> subjectSet,
                                                   Property property) {
         Set<RDFNode> objectSet = new HashSet<RDFNode>();
@@ -1405,6 +1474,12 @@ public class Validator {
         return objectSet;
     }
 
+    /**
+     * Searches subjects with a property given a set of objects
+     * @param objectSet a set of objects
+     * @param property a property
+     * @return a set of subjects
+     */
     private Set<Resource> searchSubjectsWithProperty(Set<? extends RDFNode> objectSet,
                                                      Property property) {
         Set<Resource> subjectSet = new HashSet<Resource>();
@@ -1415,6 +1490,11 @@ public class Validator {
         return subjectSet;
     }
 
+    /**
+     * Converts a set of RDFNode objects to a set of Resource objects
+     * @param nodeSet a set of RDFNode objects
+     * @return a set of Resource objects
+     */
     private Set<Resource> nodeToResource (Set<? extends RDFNode> nodeSet) {
         Set<Resource> resourceSet = new HashSet<Resource>();
         for (RDFNode node : nodeSet) {
@@ -1423,6 +1503,11 @@ public class Validator {
         return resourceSet;
     }
 
+    /**
+     * Converts a set of RDFNode objects to a set of Property objects
+     * @param nodeSet a set of RDFNode objects
+     * @return a set of Property objects
+     */
     private Set<Property> nodeToProperty (Set<? extends RDFNode> nodeSet) {
         Set<Property> propSet = new HashSet<Property>();
         for (RDFNode node : nodeSet) {
@@ -1432,6 +1517,13 @@ public class Validator {
         return propSet;
     }
 
+    /**
+     * Logs the results of a validation
+     * @param icName name of the integrity constraint
+     * @param set a set of objects violating the given constraint
+     * @param msg a message describing validation conclusion
+     * @param <T> an unknown type of the objects in the set
+     */
     private <T> void logValidationResult (String icName, Set<T> set, String msg) {
         logger.debug(icName);
         logger.debug(new String(new char[icName.length()]).replace("\0", "-"));
@@ -1446,6 +1538,15 @@ public class Validator {
         logger.debug("");
     }
 
+    /**
+     * Logs the results of a validation
+     * @param icName name of the integrity constraint
+     * @param map a map of resources with properties or values violating the
+     *            constraint
+     * @param msg a message describing validation conclusion
+     * @param <K> an unknown type of keys in the map
+     * @param <V> an unknown type of values in the map
+     */
     private <K, V> void logValidationResult (String icName,
                             Map<K, V> map, String msg) {
         logger.debug(icName);
@@ -1456,6 +1557,8 @@ public class Validator {
             for (K key : map.keySet()) {
                 logger.debug(key.toString() + msg);
                 V value = map.get(key);
+                // a value could be a set of properties or objects violating constraint
+                // for the subject represented by a key
                 if (value instanceof Set) {
                     for (Object obj : (Set) value) {
                         logger.debug("    " + obj.toString());
