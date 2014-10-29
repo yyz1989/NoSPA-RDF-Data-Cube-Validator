@@ -1137,6 +1137,18 @@ public class Validator {
         return dimSetByObsNotConByPcp;
     }
 
+    /**
+     * This function is a subtask of function checkIC20_21 for checking if the
+     * dimension values of a set of observations are connected to their
+     * corresponding code list through a parent child property
+     * @param direction indicates a direct or inverse link path
+     * @param obsSet a set of observations
+     * @param codeListByDim a map of dimensions with corresponding code lists
+     * @param pcpByCodeList a map of code lists with corresponding parent child
+     *                      properties
+     * @return a map of observations of which the dimension values are not
+     * connected to corresponding code lists by any parent child property
+     */
     public Map<Resource, Set<RDFNode>> obsSetPcpCheck (String direction,
                       Set<Resource> obsSet, Map<Property, Set<RDFNode>> codeListByDim,
                       Map<Resource, Map<String, Set<Property>>> pcpByCodeList) {
@@ -1149,6 +1161,18 @@ public class Validator {
         return faultyDimSetByObs;
     }
 
+    /**
+     * This function is a subtask of function checkIC20_21 for checking if the
+     * dimension values of an observation is conneted to a code list through a
+     * parent child property
+     * @param direction indicates a direct or inverse link path
+     * @param obs an observation
+     * @param codeListByDim a map of dimensions with corresponding code lists
+     * @param pcpByCodeList a map of code lists with corresponding parent child
+     *                      properties
+     * @return a set of dimensions of which values are not connected to
+     * corresponding code lists by any parent child property
+     */
     public Set<RDFNode> obsDimValNotConByPcpCheck (String direction, Resource obs,
                           Map<Property, Set<RDFNode>> codeListByDim,
                           Map<Resource, Map<String, Set<Property>>> pcpByCodeList) {
@@ -1171,6 +1195,17 @@ public class Validator {
         return dimNotConByPcp;
     }
 
+    /**
+     * This function is a subtask of function checkIC20_21 for checking if a
+     * code list is connected to a value through one of parent child
+     * properties in the given set
+     * @param direction indicates a direct or inverse link path
+     * @param codeList a code list
+     * @param pcpSet a set of candidate parent child properties for the code
+     *               lsit
+     * @param value the dimension value of an observation
+     * @return a boolean value indicating whether there is a connection or not
+     */
     public boolean connectedByPcp (String direction, Resource codeList,
                                    Set<Property> pcpSet, RDFNode value) {
         boolean isConnected = false;
@@ -1186,6 +1221,11 @@ public class Validator {
         return isConnected;
     }
 
+    /**
+     * This function is a subtask of function checkIC20_21 for getting sets of
+     * candidate parent child properties for the corresponding code lists
+     * @return a map of code lists with corresponding parent child properties
+     */
     public Map<Resource, Map<String, Set<Property>>> getPcpByCodeList () {
         Map<Resource, Map<String, Set<Property>>> pcpByCodeList =
                 new HashMap<Resource, Map<String, Set<Property>>>();
