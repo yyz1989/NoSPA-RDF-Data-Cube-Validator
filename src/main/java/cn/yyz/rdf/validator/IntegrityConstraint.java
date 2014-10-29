@@ -187,7 +187,8 @@ public enum IntegrityConstraint {
     ),
 
     IC16(
-                    "ASK {\n" +
+                    "SELECT ?obs ?measure " +
+                    "WHERE {\n" +
                     "    # Observation with measureType\n" +
                     "    ?obs qb:dataSet/qb:structure ?dsd ;\n" +
                     "         qb:measureType ?measure ;\n" +
@@ -202,8 +203,6 @@ public enum IntegrityConstraint {
     ),
 
     IC17(
-                    "ASK {\n" +
-                    "  {\n" +
                     "      # Count number of other measures found at each point \n" +
                     "      SELECT ?numMeasures (COUNT(?obs2) AS ?count) WHERE {\n" +
                     "          {\n" +
@@ -232,9 +231,7 @@ public enum IntegrityConstraint {
                     "          }\n" +
                     "          \n" +
                     "      } GROUP BY ?obs1 ?numMeasures\n" +
-                    "        HAVING (?count != ?numMeasures)\n" +
-                    "  }\n" +
-                    "}"
+                    "        HAVING (?count != ?numMeasures)\n"
     ),
 
     IC18(
@@ -274,7 +271,8 @@ public enum IntegrityConstraint {
     ),
 
     IC20_2(
-                    "ASK {\n" +
+                    "SELECT ?list ?v " +
+                    "WHERE {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
                     "        qb:codeList ?list .\n" +
@@ -295,7 +293,8 @@ public enum IntegrityConstraint {
     ),
 
     IC21_2(
-                    "ASK {\n" +
+                    "SELECT ?list ?v " +
+                    "WHERE {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
                     "         qb:codeList ?list .\n" +
