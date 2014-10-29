@@ -4,15 +4,14 @@ import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.*;
 import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
-import com.hp.hpl.jena.vocabulary.RDF;
-import org.apache.commons.codec.binary.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
 
 /**
+ * An RDF Data Cube Validator
  * Created by Yang Yuanzhe on 9/26/14.
  */
 public class Validator {
@@ -49,14 +48,24 @@ public class Validator {
      * @param outputPath file path used for output
      * @param outputFormat RDF serialization format (eg., RDF/XML, TURTLE, ...)
      */
-    public void output(String outputPath, String outputFormat) {
-        model.write(System.out, outputFormat);
+    public void exportModel(String outputPath, String outputFormat) {
+        logger.info("Exporting current model to the file " + outputPath);
+        try {
+            Writer writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(outputPath), "utf-8"));
+            model.write(writer, outputFormat);
+            writer.close();
+            logger.info("Exporting completed successfully");
+        } catch (IOException ioe) {
+            logger.error("The provided file path is not writable");
+        }
     }
 
     /**
-     * This function normalizes an abbreviated Data Cube with SPARQL queries.
+     * Normalizes an abbreviated Data Cube with SPARQL queries.
      */
     public void normalizeBySparql() {
+        logger.info("Normalizing cube with SPARQL queries ...");
         String queryString1 = NormalizationAlgorithm.PHASE1.getValue();
         String queryString2 = NormalizationAlgorithm.PHASE2.getValue();
         UpdateAction.parseExecute(queryString1, model);
@@ -1230,8 +1239,8 @@ public class Validator {
         Map<Resource, Map<String, Set<Property>>> pcpByCodeList =
                 new HashMap<Resource, Map<String, Set<Property>>>();
         Map<String, Set<Property>> pcpByDirect = new HashMap<String, Set<Property>>();
-        Set<Property> directPcpSet = new HashSet<Property>();
-        Set<Property> inversePcpSet = new HashSet<Property>();
+        Set<Property> dirPcpSet = new HashSet<Property>();
+        Set<Property> invPcpSet = new HashSet<Property>();
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_HierarchicalCodeList);
         Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
@@ -1241,18 +1250,18 @@ public class Validator {
                     objBySubAndProp.get(codeList).get(QB_parentChildProperty);
             for (RDFNode pcp : pcpNodeSet) {
                 if (pcp.isURIResource())
-                    directPcpSet.add(ResourceFactory.createProperty(pcp.asResource().getURI()));
+                    dirPcpSet.add(ResourceFactory.createProperty(pcp.asResource().getURI()));
                 else if (pcp.isAnon()) {
                     NodeIterator invPcpIter =
                             model.listObjectsOfProperty(pcp.asResource(), OWL_inverseOf);
-                    inversePcpSet.addAll(nodeToProperty(invPcpIter.toSet()));
+                    invPcpSet.addAll(nodeToProperty(invPcpIter.toSet()));
                 }
             }
-            pcpByDirect.put("DIRECT", directPcpSet);
-            pcpByDirect.put("INVERSE", inversePcpSet);
+            pcpByDirect.put("DIRECT", dirPcpSet);
+            pcpByDirect.put("INVERSE", invPcpSet);
             pcpByCodeList.put(codeList, pcpByDirect);
-            directPcpSet.clear();
-            inversePcpSet.clear();
+            dirPcpSet.clear();
+            invPcpSet.clear();
             pcpByDirect.clear();
         }
         return pcpByCodeList;
