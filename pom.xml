@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>cn.yyz.nospa</groupId>
-    <artifactId>rdf-data-cube-validator</artifactId>
+    <artifactId>nospa-rdf-data-cube-validator</artifactId>
     <version>0.9</version>
 
     <dependencies>
