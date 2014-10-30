@@ -12,7 +12,7 @@
     </appender>
 
     <appender name="file" class="org.apache.log4j.FileAppender">
-        <param name="file" value="validation_result_${current.timestamp}.md"/>
+        <param name="file" value="${user.dir}/validation_result_${current.timestamp}.md"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="%m%n" />
         </layout>
@@ -22,7 +22,7 @@
         </filter>
     </appender>
 
-    <logger name="cn.yyz.rdf.validator" additivity="false">
+    <logger name="cn.yyz.nospa.validator" additivity="false">
         <level value="debug"/>
         <appender-ref ref="std" />
         <appender-ref ref="file" />

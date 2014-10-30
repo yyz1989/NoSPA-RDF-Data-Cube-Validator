@@ -1,49 +1,49 @@
-package cn.yyz.rdf.validator;
+package cn.yyz.nospa.validator;
 
 /**
  * Created by yyz on 9/26/14.
  */
 public enum NormalizationAlgorithm {
     PHASE1(
-            "PREFIX rdf:            <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+            "PREFIX nospa:            <http://www.w3.org/1999/02/22-nospa-syntax-ns#>\n" +
                     "PREFIX qb:             <http://purl.org/linked-data/cube#>\n" +
                     "\n" +
                     "INSERT {\n" +
-                    "    ?o rdf:type qb:Observation .\n" +
+                    "    ?o nospa:type qb:Observation .\n" +
                     "} WHERE {\n" +
                     "    [] qb:observation ?o .\n" +
                     "};\n" +
                     "\n" +
                     "INSERT {\n" +
-                    "    ?o  rdf:type qb:Observation .\n" +
-                    "    ?ds rdf:type qb:DataSet .\n" +
+                    "    ?o  nospa:type qb:Observation .\n" +
+                    "    ?ds nospa:type qb:DataSet .\n" +
                     "} WHERE {\n" +
                     "    ?o qb:dataSet ?ds .\n" +
                     "};\n" +
                     "\n" +
                     "INSERT {\n" +
-                    "    ?s rdf:type qb:Slice .\n" +
+                    "    ?s nospa:type qb:Slice .\n" +
                     "} WHERE {\n" +
                     "    [] qb:slice ?s.\n" +
                     "};\n" +
                     "\n" +
                     "INSERT {\n" +
                     "    ?cs qb:componentProperty ?p .\n" +
-                    "    ?p  rdf:type qb:DimensionProperty .\n" +
+                    "    ?p  nospa:type qb:DimensionProperty .\n" +
                     "} WHERE {\n" +
                     "    ?cs qb:dimension ?p .\n" +
                     "};\n" +
                     "\n" +
                     "INSERT {\n" +
                     "    ?cs qb:componentProperty ?p .\n" +
-                    "    ?p  rdf:type qb:MeasureProperty .\n" +
+                    "    ?p  nospa:type qb:MeasureProperty .\n" +
                     "} WHERE {\n" +
                     "    ?cs qb:measure ?p .\n" +
                     "};\n" +
                     "\n" +
                     "INSERT {\n" +
                     "    ?cs qb:componentProperty ?p .\n" +
-                    "    ?p  rdf:type qb:AttributeProperty .\n" +
+                    "    ?p  nospa:type qb:AttributeProperty .\n" +
                     "} WHERE {\n" +
                     "    ?cs qb:attribute ?p .\n" +
                     "}"

@@ -1,4 +1,4 @@
-package cn.yyz.rdf.validator;
+package cn.yyz.nospa.validator;
 
 /**
  * Created by yyz on 9/26/14.
@@ -6,7 +6,7 @@ package cn.yyz.rdf.validator;
 public enum IntegrityConstraint {
     PREFIX(
             "PREFIX qb: <http://purl.org/linked-data/cube#>\n" +
-                    "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+                    "PREFIX rdfs: <http://www.w3.org/2000/01/nospa-schema#>\n" +
                     "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n" +
                     "PREFIX owl: <http://www.w3.org/2002/07/owl#>\n" +
                     "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n"

@@ -1,4 +1,4 @@
-package cn.yyz.rdf.validator;
+package cn.yyz.nospa.validator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +39,7 @@ public class Main {
         //long t1 = System.currentTimeMillis();
         //validator.normalizeBySparql();
         long t2 = System.currentTimeMillis();
-        validator.checkIC1();
+        validator.checkICAll();
         long t3 = System.currentTimeMillis();
 
         //validator.exportModel(outputPath, outputFormat);

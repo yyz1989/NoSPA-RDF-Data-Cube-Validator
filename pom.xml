@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.yyz.nospa</groupId>
+    <groupId>cn.yyz.nospa</groupId>
     <artifactId>rdf-data-cube-validator</artifactId>
     <version>0.9</version>
 
@@ -39,7 +39,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>fully.qualified.MainClass</mainClass>
+                            <mainClass>cn.yyz.nospa.validator.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
