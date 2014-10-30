@@ -53,8 +53,8 @@ The constraint check IC-12, "No duplicate observations", is the most time-consum
 
 Test file: a data cube containing 13970 observations  
 Test environment: Ubuntu 14.04 with VMWare, 2 CPU cores of I5-2450M @ 2GHz, 2 GB memory, ordinary HHD
-Time consumption for validating IC-12:  
 
-Validation by SPARQL queries with Virtuoso: 1 hour 22 min  
-Validation by SPARQL queries with Jena Parser: 58 min  
-Validation by NoSPA: 39 sec  
+Time consumption for validating IC-12:  
+  * Validation by SPARQL queries with Virtuoso: 1 hour 22 min  
+  * Validation by SPARQL queries with Jena Parser: 58 min  
+  * Validation by NoSPA: 39 sec  
