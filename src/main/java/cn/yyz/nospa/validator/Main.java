@@ -19,18 +19,25 @@ public class Main {
     public static void main(String[] args) {
         Logger logger = LoggerFactory.getLogger(Main.class);
         String workPath = System.getProperty("user.dir");
-        Properties properties = new Properties();
-        InputStream inputStream ;
-        try {
-            inputStream = Main.class.getClassLoader().getResourceAsStream("config.properties");
-            properties.load(inputStream);
-        } catch (IOException ioe) {
-            logger.error("Unable to load the property file");
+        String inputPath, inputFormat, outputPath, outputFormat;
+        if (args.length != 2) {
+            Properties properties = new Properties();
+            InputStream inputStream;
+            try {
+                inputStream = Main.class.getClassLoader().getResourceAsStream("config.properties");
+                properties.load(inputStream);
+            } catch (IOException ioe) {
+                logger.error("Unable to load the property file");
+            }
+            inputPath = workPath + properties.getProperty("INPUT_PATH");
+            inputFormat = properties.getProperty("INPUT_FORMAT");
+            outputPath = workPath + properties.getProperty("OUTPUT_PATH");
+            outputFormat = properties.getProperty("OUTPUT_FORMAT");
         }
-        String inputPath = workPath + properties.getProperty("INPUT_PATH");
-        String inputFormat = properties.getProperty("INPUT_FORMAT");
-        String outputPath = workPath + properties.getProperty("OUTPUT_PATH");
-        String outputFormat = properties.getProperty("OUTPUT_FORMAT");
+        else {
+            inputPath = args[0];
+            inputFormat = args[1];
+        }
 
         Validator validator = new Validator(inputPath, inputFormat);
         validator.normalizePhase1();
