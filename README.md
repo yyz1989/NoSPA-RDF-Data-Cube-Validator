@@ -29,6 +29,7 @@ In the case that you need to run this pacakge independently, you will need to do
 ### Validation
 
 Basically, there are 3 ways to use it:
+
 1.  Use an IDE to modify the code and property file by yourself and run the Main class, without making any packages.
 
 2.  In the case that you need to integrate it into your own project, you have to import the package ``rdf-data-cube-validator-0.9.jar``, create a new validator instance and call the functions to normalize and validate the cube. 
