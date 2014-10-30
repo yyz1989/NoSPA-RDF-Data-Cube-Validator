@@ -12,7 +12,7 @@
     </appender>
 
     <appender name="file" class="org.apache.log4j.FileAppender">
-        <param name="file" value="validation_result.md"/>
+        <param name="file" value="validation_result_${current.timestamp}.md"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="%m%n" />
         </layout>

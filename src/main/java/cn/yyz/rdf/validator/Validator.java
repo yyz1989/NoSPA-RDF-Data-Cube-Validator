@@ -4,11 +4,10 @@ import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.*;
 import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
-import com.hp.hpl.jena.vocabulary.RDF;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -32,6 +31,9 @@ public class Validator {
     public Validator(String filename, String format) {
         logger.debug("RDF Cube Validation Result");
         logger.debug("==========================");
+        logger.debug("");
+        logger.debug(filename);
+        logger.debug(new String(new char[filename.length()]).replace("\0", "-"));
         logger.debug("");
         logger.info("Loading cube file ...");
         model = ModelFactory.createDefaultModel();

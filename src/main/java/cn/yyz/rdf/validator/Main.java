@@ -4,12 +4,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Properties;
 
 /**
  * Created by yyz on 9/26/14.
  */
 public class Main {
+    static {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+        System.setProperty("current.timestamp", dateFormat.format(new Date()));
+    }
     public static void main(String[] args) {
         Logger logger = LoggerFactory.getLogger(Main.class);
         String workPath = System.getProperty("user.dir");
