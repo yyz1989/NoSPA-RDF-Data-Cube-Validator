@@ -36,15 +36,15 @@ public class Main {
         validator.normalizePhase1();
         validator.normalizePhase2();
 
-        long t1 = System.currentTimeMillis();
+        //long t1 = System.currentTimeMillis();
         //validator.normalizeBySparql();
         long t2 = System.currentTimeMillis();
-        validator.checkIC19();
+        validator.checkIC1();
         long t3 = System.currentTimeMillis();
 
         //validator.exportModel(outputPath, outputFormat);
 
-        logger.info("The validation task completed in " + Long.toString(t2 - t1) + "ms");
+        //logger.info("The validation task completed in " + Long.toString(t2 - t1) + "ms");
         logger.info("The validation task completed in " + Long.toString(t3 - t2) + "ms");
     }
 }

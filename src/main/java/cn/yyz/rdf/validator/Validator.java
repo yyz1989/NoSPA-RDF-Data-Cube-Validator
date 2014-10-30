@@ -32,8 +32,8 @@ public class Validator {
         logger.debug("RDF Cube Validation Result");
         logger.debug("==========================");
         logger.debug("");
+        logger.debug(new Date().toString());
         logger.debug(filename);
-        logger.debug(new String(new char[filename.length()]).replace("\0", "-"));
         logger.debug("");
         logger.info("Loading cube file ...");
         model = ModelFactory.createDefaultModel();
