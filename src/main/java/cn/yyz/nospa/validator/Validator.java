@@ -76,7 +76,7 @@ public class Validator {
 
     /**
      * This function normalizes an abbreviated Data Cube at phase 1 for type
-     * and property closure. It ensures that nospa:type assertions on instances
+     * and property closure. It ensures that rdf:type assertions on instances
      * of qb:Observation and qb:Slice may be omitted in an abbreviated Data
      * Cube. They also simplify the second set of update operations by
      * expanding the sub properties of qb:componentProperty (specifically
@@ -1139,9 +1139,6 @@ public class Validator {
         List<Map<Resource, Set<RDFNode>>> dimSetByObsNotConByPcp =
                 new ArrayList<Map<Resource, Set<RDFNode>>>();
         Map<Resource, Map<String, Set<Property>>> pcpByCodeList = getPcpByCodeList();
-        if (pcpByCodeList.isEmpty()) {
-            return dimSetByObsNotConByPcp;
-        }
         Set<Resource> codeListWithDefSet = model.listResourcesWithProperty(RDF_type,
                 QB_HierarchicalCodeList).toSet();
         Map<Resource, Set<? extends RDFNode>> dimByDataset = searchByPathVisit(null,
@@ -1626,8 +1623,8 @@ public class Validator {
     }
 
     private static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";
-    private static final String PREFIX_RDF = "http://www.w3.org/1999/02/22-nospa-syntax-ns#";
-    private static final String PREFIX_RDFS = "http://www.w3.org/2000/01/nospa-schema#";
+    private static final String PREFIX_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    private static final String PREFIX_RDFS = "http://www.w3.org/2000/01/rdf-schema#";
     private static final String PREFIX_SKOS = "http://www.w3.org/2004/02/skos/core#";
     private static final String PREFIX_OWL = "http://www.w3.org/2002/07/owl#";
 
