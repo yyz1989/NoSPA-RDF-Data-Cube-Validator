@@ -396,11 +396,14 @@ public class Validator {
         Set<Resource> dsdWithoutMeasure = new HashSet<Resource>();
         Set<Resource> dsdSet = model.listSubjectsWithProperty(RDF_type,
                 QB_DataStructureDefinition).toSet();
+        Set<Resource> measurePropSet = model.listSubjectsWithProperty(RDF_type,
+                QB_MeasureProperty).toSet();
         for (Resource dsd : dsdSet) {
-            Property[] properties = {QB_component, QB_componentProperty, RDF_type};
             Map<Resource, Set<? extends RDFNode>> dsdPropertyMap = searchByPathVisit(dsd,
-                    Arrays.asList(properties), QB_MeasureProperty);
-            if (dsdPropertyMap.get(dsd).isEmpty()) dsdWithoutMeasure.add(dsd);
+                    Arrays.asList(QB_component, QB_componentProperty), null);
+            Set<? extends RDFNode> compPropSet = dsdPropertyMap.get(dsd);
+            compPropSet.retainAll(measurePropSet);
+            if (compPropSet.isEmpty()) dsdWithoutMeasure.add(dsd);
         }
         String logMsg = "The following DSDs do not include at least one declared measure: ";
         logValidationResult(icName, dsdWithoutMeasure, logMsg);

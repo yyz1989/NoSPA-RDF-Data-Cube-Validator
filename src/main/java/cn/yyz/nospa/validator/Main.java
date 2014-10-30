@@ -31,12 +31,14 @@ public class Main {
             }
             inputPath = workPath + properties.getProperty("INPUT_PATH");
             inputFormat = properties.getProperty("INPUT_FORMAT");
-            outputPath = workPath + properties.getProperty("OUTPUT_PATH");
-            outputFormat = properties.getProperty("OUTPUT_FORMAT");
+            //outputPath = workPath + properties.getProperty("OUTPUT_PATH");
+            //outputFormat = properties.getProperty("OUTPUT_FORMAT");
         }
         else {
             inputPath = args[0];
             inputFormat = args[1];
+            //outputPath = args[2];
+            //outputFormat = args[3];
         }
 
         Validator validator = new Validator(inputPath, inputFormat);
