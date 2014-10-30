@@ -39,7 +39,7 @@ public class Main {
         //long t1 = System.currentTimeMillis();
         //validator.normalizeBySparql();
         long t2 = System.currentTimeMillis();
-        validator.checkICAll();
+        validator.checkIC8();
         long t3 = System.currentTimeMillis();
 
         //validator.exportModel(outputPath, outputFormat);

@@ -520,7 +520,8 @@ public class Validator {
         for (Resource dsd : sliceKeyByDSD.keySet()) {
             Set<? extends RDFNode> sliceKeySet = sliceKeyByDSD.get(dsd);
             for (RDFNode sliceKey : sliceKeySet) {
-                propSet.addAll(propBySliceKey
+                if (propBySliceKey.containsKey(sliceKey.asResource()))
+                    propSet.addAll(propBySliceKey
                         .get(sliceKey.asResource()).get(QB_componentProperty));
             }
             for (RDFNode property : propSet) {
