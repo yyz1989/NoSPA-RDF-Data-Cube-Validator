@@ -3,9 +3,9 @@ NoSPA RDF Data Cube Validator
 
 ### Introduction
 
-This is an RDF Data Cube Validator. Its significant difference from other exsiting validators is that it is not based on SPARQL queries, as its name "NoSPA". Jena library is used to manipulate RDF models. The official SPARQL queries for constraint checks are interpreted and parsed by this validator to search functions with nested statement listing functions provided by Jena and filters for different conditions. It has an outstanding performance because the entire process is executed in the memory. I believe that it is valuable to sacrifice some memory for saving time.
+This is an RDF Data Cube Validator. Its significant difference from other existing validators is that it is not based on SPARQL queries, hence its name "NoSPA". Jena library is used to manipulate RDF models. The official SPARQL queries for constraint checks are interpreted and parsed by this validator to search functions with nested statement listing functions provided by Jena and filters for different conditions. It has an outstanding performance because the entire process is executed in memory. I believe that it is valuable to sacrifice some memory for saving time.
 
-Here is some references and knowledge background for this tool:
+Here are some references and knowledge background for this tool:
   * The official RDF data cube spec: [The RDF Data Cube Vocabulary](http://www.w3.org/TR/vocab-data-cube/)
   * Jena API: [Apache Jena](http://jena.apache.org/index.html)
   * The official SPARQL spec: [SPARQL 1.1 Query Language](http://www.w3.org/TR/sparql11-query/)
@@ -24,7 +24,7 @@ This tool is written in Java and managed by Maven so you can compile it easily b
 
 Then you need to do a ``mvn package`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9.jar``. Note that in this case the library for Jena and Log4j is not included in this package.
 
-In the case that you need to run this pacakge independently, you will need to do a ``mvn package assembly:single`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9-jar-with-dependencies.jar``, which includes all the required libraries to run it.
+In the case that you need to run this package independently, you will need to do a ``mvn package assembly:single`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9-jar-with-dependencies.jar``, which includes all the required libraries to run it.
 
 ### Validation
 
