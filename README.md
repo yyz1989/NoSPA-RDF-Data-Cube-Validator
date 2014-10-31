@@ -58,3 +58,9 @@ Time consumption for validating IC-12:
   * Validation by SPARQL queries with Virtuoso: 1 hour 22 min  
   * Validation by SPARQL queries with Jena Parser: 58 min  
   * Validation by NoSPA: 39 sec  
+
+### Prospects
+
+Due to lack of faluty datasets, my tests may not cover all cases. Please give me any feedback and suggestion if you are using this software so I can keep improving its quality.
+
+I am still working on some minor changes related to the functionalities. I am planning to make a fair front end when it gets stabilized.
