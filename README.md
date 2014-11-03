@@ -64,3 +64,5 @@ Time consumption for validating IC-12:
 Due to lack of faluty datasets, my tests may not cover all cases. Please give me any feedback and suggestion if you are using this software so I can keep improving its quality.
 
 I am still working on some minor changes related to the functionalities. I am planning to make a fair front end when it gets stabilized.
+
+As I explained in the release note, the current version is only a "workable" version so the quality of code is not good. I am reformatting it these days in order to make it more structured (eg., at least not all code in a big class :D). I am going to release a new version within this week.
