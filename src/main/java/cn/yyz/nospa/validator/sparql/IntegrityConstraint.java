@@ -1,4 +1,4 @@
-package cn.yyz.nospa.validator;
+package cn.yyz.nospa.validator.sparql;
 
 /**
  * Created by yyz on 9/26/14.
