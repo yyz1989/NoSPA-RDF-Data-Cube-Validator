@@ -35,9 +35,8 @@ Basically, there are 3 ways to use it:
 2.  In the case that you need to integrate it into your own project, you have to import the package ``rdf-data-cube-validator-0.9.jar``, create a new validator instance and call the functions to normalize and validate the cube. 
 
     ``Validator validator = new Validator(inputPath, inputFormat);``
-    ``validator.normalizePhase1();``
-    ``validator.normalizePhase2();``
-    ``validator.checkICAll();``
+    ``validator.normalize();``
+    ``validator.validateAll();``
 
     The ``inputPath`` is the path of the cube file and ``inputFormat`` indicates the RDF format of the cube file such as RDF/XML, RDF/XML-ABBREV, TURTLE, N-TRIPLES, etc. 
 
@@ -57,12 +56,10 @@ Test environment: Ubuntu 14.04 with VMWare, 2 CPU cores of I5-2450M @ 2GHz, 2 GB
 Time consumption for validating IC-12:  
   * Validation by SPARQL queries with Virtuoso: 1 hour 22 min  
   * Validation by SPARQL queries with Jena Parser: 58 min  
-  * Validation by NoSPA: 39 sec  
+  * Validation by NoSPA: 29 sec  
 
 ### Prospects
 
 Due to lack of faluty datasets, my tests may not cover all cases. Please give me any feedback and suggestion if you are using this software so I can keep improving its quality.
 
 I am still working on some minor changes related to the functionalities. I am planning to make a fair front end when it gets stabilized.
-
-As I explained in the release note, the current version is only a "workable" version so the quality of code is not good. I am reformatting it these days in order to make it more structured (eg., at least not all code in a big class :D). I am going to release a new version within this week.
