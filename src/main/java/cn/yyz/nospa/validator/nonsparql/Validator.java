@@ -1,11 +1,6 @@
-package cn.yyz.nospa.validator;
+package cn.yyz.nospa.validator.nonsparql;
 
-import cn.yyz.nospa.validator.nonsparql.*;
-import cn.yyz.nospa.validator.sparql.IntegrityConstraint;
-import cn.yyz.nospa.validator.sparql.NormalizationAlgorithm;
-import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.*;
-import com.hp.hpl.jena.update.UpdateAction;
 import com.hp.hpl.jena.util.FileManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,11 +14,6 @@ import java.util.*;
 public class Validator {
     private Logger logger = LoggerFactory.getLogger(Validator.class);
     private Model model;
-    private Map<Resource, Set<Resource>> dimensionByDataset =
-            new HashMap<Resource, Set<Resource>>();
-    private Map<Resource, Map<Resource, Set<Resource>>> valueByDatasetAndDim =
-            new HashMap<Resource, Map<Resource, Set<Resource>>>();
-    private Map<Resource, Set<RDFNode>> dsdByDataset = new HashMap<Resource, Set<RDFNode>>();
 
     /**
      * Constructor of a validator
@@ -64,273 +54,47 @@ public class Validator {
         } catch (IOException ioe) {
             logger.error("The provided file path is not writable");
         }
-    }
+    }    
 
-    /**
-     * Normalizes an abbreviated Data Cube with SPARQL queries.
-     */
-    public void normalizeBySparql() {
-        logger.info("Normalizing cube with SPARQL queries ...");
-        String queryString1 = NormalizationAlgorithm.PHASE1.getValue();
-        String queryString2 = NormalizationAlgorithm.PHASE2.getValue();
-        UpdateAction.parseExecute(queryString1, model);
-        UpdateAction.parseExecute(queryString2, model);
-    }
-
-    /**
-     * This function normalizes an abbreviated Data Cube at phase 1 for type
-     * and property closure. It ensures that rdf:type assertions on instances
-     * of qb:Observation and qb:Slice may be omitted in an abbreviated Data
-     * Cube. They also simplify the second set of update operations by
-     * expanding the sub properties of qb:componentProperty (specifically
-     * qb:dimension, qb:measure and qb:attribute).
-     */
-    public void normalizePhase1() {
-        // Phase 1: Type and property closure
+    public void normalize() {
+        Normalizer normalizer = new Normalizer(model);
         logger.info("Normalizing cube at phase 1 ...");
-
-        Set<RDFNode> obsSet = model.listObjectsOfProperty(QB_observation).toSet();
-        for (RDFNode obs : obsSet) {
-            if (obs.isResource())
-                model.add(obs.asResource(), RDF_type, QB_Observation);
-        }
-
-        StmtIterator stmtIter = model.listStatements(null, QB_dataSet, (RDFNode) null);
-        while (stmtIter.hasNext()) {
-            Statement statement = stmtIter.nextStatement();
-            RDFNode obj = statement.getObject();
-            if (obj.isResource())
-                model.add(obj.asResource(), RDF_type, QB_DataSet);
-            model.add(statement.getSubject(), RDF_type, QB_Observation);
-        }
-
-        Set<RDFNode> sliceSet = model.listObjectsOfProperty(QB_slice).toSet();
-        for (RDFNode slice : sliceSet) {
-            model.add(slice.asResource(), RDF_type, QB_Slice);
-        }
-
-        stmtIter = model.listStatements(null, QB_dimension, (RDFNode) null);
-        while (stmtIter.hasNext()) {
-            Statement statement = stmtIter.nextStatement();
-            RDFNode obj = statement.getObject();
-            if (obj.isResource())
-                model.add(obj.asResource(), RDF_type, QB_DimensionProperty);
-            model.add(statement.getSubject(), QB_componentProperty, statement.getObject());
-        }
-
-        stmtIter = model.listStatements(null, QB_measure, (RDFNode) null);
-        while (stmtIter.hasNext()) {
-            Statement statement = stmtIter.nextStatement();
-            RDFNode obj = statement.getObject();
-            if (obj.isResource())
-                model.add(obj.asResource(), RDF_type, QB_MeasureProperty);
-            model.add(statement.getSubject(), QB_componentProperty, statement.getObject());
-        }
-
-        stmtIter = model.listStatements(null, QB_attribute, (RDFNode) null);
-        while (stmtIter.hasNext()) {
-            Statement statement = stmtIter.nextStatement();
-            RDFNode obj = statement.getObject();
-            if (obj.isResource())
-                model.add(obj.asResource(), RDF_type, QB_AttributeProperty);
-            model.add(statement.getSubject(), QB_componentProperty, statement.getObject());
-        }
-    }
-
-    /**
-     * This function normalizes an abbreviated Data Cube at phase 2. It checks
-     * the components of the data structure definition of the data set for
-     * declared attachment levels. For each of the possible attachments levels
-     * it looks for ocurrences of that component to be pushed down to the
-     * corresponding observations.
-     */
-    public void normalizePhase2() {
+        normalizer.normalizePhase1();
         logger.info("Normalizing cube at phase 2 ...");
-        pushDownDatasetAttachments();
-        pushDownSliceAttachments();
-        pushDownDimValOnSlice();
-    }
-
-    /**
-     * Push down Dataset attachments.
-     */
-    private void pushDownDatasetAttachments() {
-        Map<Resource, Set<? extends RDFNode>> specSetByDataset = searchByPathVisit(null,
-                Arrays.asList(QB_structure, QB_component), null);
-        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-        objByProp.put(QB_componentAttachment, QB_DataSet);
-        Map<Resource, Map<Property, Set<RDFNode>>> compBySpec = searchByMultipleProperty(null,
-                objByProp, Arrays.asList(QB_componentProperty));
-        for (Resource dataset : specSetByDataset.keySet()) {
-            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
-            Set<? extends RDFNode> specSet = specSetByDataset.get(dataset);
-            specSet.retainAll(compBySpec.keySet());
-            Set<RDFNode> compSet = new HashSet<RDFNode>();
-            for (RDFNode spec : specSet) {
-                compSet.addAll(compBySpec.get(spec.asResource()).get(QB_componentProperty));
-            }
-            Map<Property, Set<RDFNode>> valueSetByComp = new HashMap<Property, Set<RDFNode>>();
-            for (RDFNode comp : compSet) {
-                if (comp.isURIResource()) {
-                    Property compAsProp =
-                            ResourceFactory.createProperty(comp.asResource().getURI());
-                    valueSetByComp.put(compAsProp,
-                            model.listObjectsOfProperty(dataset, compAsProp).toSet());
-                }
-            }
-            insertValueToObs(obsSet, valueSetByComp);
-        }
-    }
-
-    /**
-     * Push dwon Slice Attachments.
-     */
-    private void pushDownSliceAttachments() {
-        Map<Resource, Set<? extends RDFNode>> specSetByDataset = searchByPathVisit(null,
-                Arrays.asList(QB_structure, QB_component), null);
-        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-        objByProp.put(QB_componentAttachment, QB_Slice);
-        Map<Resource, Map<Property, Set<RDFNode>>> compBySpec = searchByMultipleProperty(null,
-                objByProp, Arrays.asList(QB_componentProperty));
-        for (Resource dataset : specSetByDataset.keySet()) {
-            Set<? extends RDFNode> specSet = specSetByDataset.get(dataset);
-            specSet.retainAll(compBySpec.keySet());
-            Set<RDFNode> compSet = new HashSet<RDFNode>();
-            for (RDFNode spec : specSet) {
-                compSet.addAll(compBySpec.get(spec.asResource()).get(QB_componentProperty));
-            }
-            NodeIterator sliceIter = model.listObjectsOfProperty(dataset, QB_slice);
-            Set<Resource> sliceSet = nodeToResource(sliceIter.toSet());
-            for (Resource slice : sliceSet) {
-                NodeIterator resIter = model.listObjectsOfProperty(slice, QB_observation);
-                Set<Resource> obsSet = nodeToResource(resIter.toSet());
-                Map<Property, Set<RDFNode>> valueSetByComp = new HashMap<Property, Set<RDFNode>>();
-                for (RDFNode comp : compSet) {
-                    if (comp.isURIResource()) {
-                        Property compAsProp =
-                                ResourceFactory.createProperty(comp.asResource().getURI());
-                        valueSetByComp.put(compAsProp,
-                                model.listObjectsOfProperty(slice, compAsProp).toSet());
-                    }
-                }
-                insertValueToObs(obsSet, valueSetByComp);
-            }
-        }
-    }
-
-    /**
-     * Push down dimension values on slices.
-     */
-    private void pushDownDimValOnSlice () {
-        Map<Resource, Set<? extends RDFNode>> specSetByDataset = searchByPathVisit(null,
-                Arrays.asList(QB_structure, QB_component), null);
-        Map<Resource, Set<? extends RDFNode>> compBySpec = searchByPathVisit(null,
-                Arrays.asList(QB_componentProperty), null);
-        Set<Resource> compWithDef = model.listResourcesWithProperty(RDF_type,
-                QB_DimensionProperty).toSet();
-        for (Resource dataset : specSetByDataset.keySet()) {
-            Set<? extends RDFNode> specSet = specSetByDataset.get(dataset);
-            specSet.retainAll(compBySpec.keySet());
-            Set<RDFNode> compSet = new HashSet<RDFNode>();
-            for (RDFNode spec : specSet) {
-                compSet.addAll(compBySpec.get(spec.asResource()));
-            }
-            compSet.retainAll(compWithDef);
-            NodeIterator sliceIter = model.listObjectsOfProperty(dataset, QB_slice);
-            Set<Resource> sliceSet = nodeToResource(sliceIter.toSet());
-            for (Resource slice : sliceSet) {
-                NodeIterator resIter = model.listObjectsOfProperty(slice, QB_observation);
-                Set<Resource> obsSet = nodeToResource(resIter.toSet());
-                Map<Property, Set<RDFNode>> valueSetByComp = new HashMap<Property, Set<RDFNode>>();
-                for (RDFNode comp : compSet) {
-                    if (comp.isURIResource()) {
-                        Property compAsProp =
-                                ResourceFactory.createProperty(comp.asResource().getURI());
-                        valueSetByComp.put(compAsProp,
-                                model.listObjectsOfProperty(slice, compAsProp).toSet());
-                    }
-                }
-                insertValueToObs(obsSet, valueSetByComp);
-            }
-        }
-    }
-
-    /**
-     * Insert statements to the model for the given observations.
-     * @param obsSet a set of observations to be associated with new statements
-     * @param objSetByProp a map containing the properties and corresponding
-     *                     object values to be associated to the observations
-     */
-    private void insertValueToObs(Set<Resource> obsSet, Map<Property, Set<RDFNode>> objSetByProp) {
-        for (Property prop : objSetByProp.keySet()) {
-            Set<RDFNode> objSet = objSetByProp.get(prop);
-            for (Resource obs : obsSet) {
-                for (RDFNode obj : objSet) {
-                    model.add(obs, prop, obj);
-                }
-            }
-        }
+        normalizer.normalizePhase2();
     }
 
     /**
      * A shortcut function to excute all constraint validations.
      */
-    public void checkICAll() {
+    public void validateAll() {
         logger.info("Validating all constraints ...");
-        checkIC1();
-        checkIC2();
-        checkIC3();
-        checkIC4();
-        checkIC5();
-        checkIC6();
-        checkIC7();
-        checkIC8();
-        checkIC9();
-        checkIC10();
-        checkIC11_12();
-        checkIC13();
-        checkIC14();
-        checkIC15_16();
-        checkIC17();
-        checkIC18();
-        checkIC19();
-        checkIC20_21();
-    }
-
-    /**
-     * The function to validate constraints by SPARQL queries
-     * @param constraint name of constraint (e.g., IC1)
-     */
-    public void checkICBySparql(String constraint) {
-        checkICBySparql(IntegrityConstraint.valueOf(constraint));
-    }
-
-    /**
-     * The function to validate constraints by SPARQL queries
-     * @param constraint constraint defined in an enum class
-     */
-    public void checkICBySparql(IntegrityConstraint constraint) {
-        String prefix = IntegrityConstraint.PREFIX.getValue();
-        Query query = QueryFactory.create(prefix + constraint.getValue());
-        QueryExecution qe = QueryExecutionFactory.create(query, model);
-        ResultSet resultSet = qe.execSelect();
-        List<String> variables = resultSet.getResultVars();
-        while (resultSet.hasNext()) {
-            QuerySolution querySolution = resultSet.next();
-            for (String var : variables) {
-                System.out.print(var + ": " + querySolution.get(var).toString() + "    ");
-            }
-            System.out.println();
-        }
-        qe.close();
-    }
+        validateIC1();
+        validateIC2();
+        validateIC3();
+        validateIC4();
+        validateIC5();
+        validateIC6();
+        validateIC7();
+        validateIC8();
+        validateIC9();
+        validateIC10();
+        validateIC11_12();
+        validateIC13();
+        validateIC14();
+        validateIC15_16();
+        validateIC17();
+        validateIC18();
+        validateIC19();
+        validateIC20_21();
+    }    
 
     /**
      * Validate IC-1 Unique DataSet: Every qb:Observation has exactly one
      * associated qb:DataSet.
      * @return a map of observations with multiple datasets
      */
-    public Map<Resource, Set<RDFNode>> checkIC1() {
+    public Map<Resource, Set<RDFNode>> validateIC1() {
         String icName = "Integrity Constraint 1: Unique DataSet";
         logger.info("Validating " + icName);
         ValidatorIC1 validatorIC1 = new ValidatorIC1(model);
@@ -345,7 +109,7 @@ public class Validator {
      * qb:DataStructureDefinition.
      * @return a map of datasets with multiple dsds
      */
-    public Map<Resource, Set<RDFNode>> checkIC2() {
+    public Map<Resource, Set<RDFNode>> validateIC2() {
         String icName = "Integrity Constraint 2: Unique DSD";
         logger.info("Validating " + icName);
         ValidatorIC2 validatorIC2 = new ValidatorIC2(model);
@@ -360,7 +124,7 @@ public class Validator {
      * must include at least one declared measure.
      * @return a set of DSDs without at least one declared measure
      */
-    public Set<Resource> checkIC3() {
+    public Set<Resource> validateIC3() {
         String icName = "Integrity Constraint 3: DSD Includes Measure";
         logger.info("Validating " + icName);
         ValidatorIC3 validatorIC3 = new ValidatorIC3(model);
@@ -375,7 +139,7 @@ public class Validator {
      * qb:DataStructureDefinition must have a declared rdfs:range.
      * @return a set of dimensions without a declared rdfs:range
      */
-    public Set<Resource> checkIC4() {
+    public Set<Resource> validateIC4() {
         String icName = "Integrity Constraint 4: Dimensions Have Range";
         logger.info("Validating " + icName);
         ValidatorIC4 validatorIC4 = new ValidatorIC4(model);
@@ -390,7 +154,7 @@ public class Validator {
      * range skos:Concept must have a qb:codeList.
      * @return a set of concept dimensions without code lists
      */
-    public Set<Resource> checkIC5() {
+    public Set<Resource> validateIC5() {
         String icName = "Integrity Constraint 5: Concept Dimensions Have Code Lists";
         logger.info("Validating " + icName);
         ValidatorIC5 validatorIC5 = new ValidatorIC5(model);
@@ -406,7 +170,7 @@ public class Validator {
      * qb:componentRequired are attributes.
      * @return a set of component properties not declared as attributes
      */
-    public Set<RDFNode> checkIC6() {
+    public Set<RDFNode> validateIC6() {
         String icName = "Integrity Constraint 6: Only Attributes May Be Optional";
         logger.info("Validating " + icName);
         ValidatorIC6 validatorIC6 = new ValidatorIC6(model);
@@ -421,7 +185,7 @@ public class Validator {
      * associated with a qb:DataStructureDefinition.
      * @return a set of Slice Keys not associated with DSDs
      */
-    public Set<Resource> checkIC7() {
+    public Set<Resource> validateIC7() {
         String icName = "Integrity Constraint 7: Slice Keys Must Be Declared";
         logger.info("Validating " + icName);
         ValidatorIC7 validatorIC7 = new ValidatorIC7(model);
@@ -437,7 +201,7 @@ public class Validator {
      * associated qb:DataStructureDefinition.
      * @return a set of component properties not associated with DSDs
      */
-    public Set<RDFNode> checkIC8() {
+    public Set<RDFNode> validateIC8() {
         String icName = "Integrity Constraint 8: Slice Keys Consistent With DSD";
         logger.info("Validating " + icName);
         ValidatorIC8 validatorIC8 = new ValidatorIC8(model);
@@ -453,7 +217,7 @@ public class Validator {
      * one associated qb:sliceStructure.
      * @return a map of slices with multiple slice structures
      */
-    public Map<Resource, Set<RDFNode>> checkIC9() {
+    public Map<Resource, Set<RDFNode>> validateIC9() {
         String icName = "Integrity Constraint 9: Unique Slice Structure";
         logger.info("Validating " + icName);
         ValidatorIC9 validatorIC9 = new ValidatorIC9(model);
@@ -468,7 +232,7 @@ public class Validator {
      * value for every dimension declared in its qb:sliceStructure.
      * @return a map of slices with a set of dimensions without values
      */
-    public Map<Resource, Set<RDFNode>> checkIC10() {
+    public Map<Resource, Set<RDFNode>> validateIC10() {
         String icName = "Integrity Constraint 10: Slice Dimensions Complete";
         logger.info("Validating " + icName);
         ValidatorIC10 validatorIC10 = new ValidatorIC10(model);
@@ -486,7 +250,7 @@ public class Validator {
      * @return a map of observations with dimensions without values or with
      * duplicate values.
      */
-    public Map<Resource, Set<RDFNode>> checkIC11_12() {
+    public Map<Resource, Set<RDFNode>> validateIC11_12() {
         String icName11 = "Integrity Constraint 11: All Dimensions Required";
         String icName12 = "Integrity Constraint 12: No Duplicate Observations";
         logger.info("Validating " + icName11 + " & " + icName12);
@@ -514,7 +278,7 @@ public class Validator {
      * each declared attribute that is marked as required.
      * @return a map of observations with attribute properties missing values
      */
-    public Map<Resource, Set<RDFNode>> checkIC13() {
+    public Map<Resource, Set<RDFNode>> validateIC13() {
         String icName = "Integrity Constraint 13: Required Attributes";
         logger.info("Validating " + icName);
         ValidatorIC13 validatorIC13 = new ValidatorIC13(model);
@@ -531,7 +295,7 @@ public class Validator {
      * value for every declared measure.
      * @return a map of observations with a set of measures missing values.
      */
-    public Map<Resource, Set<RDFNode>> checkIC14() {
+    public Map<Resource, Set<RDFNode>> validateIC14() {
         String icName = "Integrity Constraint 14: All Measures Present";
         logger.info("Validating " + icName);
         ValidatorIC14 validatorIC14 = new ValidatorIC14(model);
@@ -553,7 +317,7 @@ public class Validator {
      * corresponding to its qb:measureType).
      * @return a map of faulty observations with measures missing values
      */
-    public Map<Resource, Set<RDFNode>> checkIC15_16() {
+    public Map<Resource, Set<RDFNode>> validateIC15_16() {
         String icName15 = "Integrity Constraint 15: Measure Dimension Consistent";
         String icName16 = "Integrity Constraint 16: Single Measure On Measure Dimension Observation";
         logger.info("Validating " + icName15 + " & " + icName16);
@@ -575,8 +339,6 @@ public class Validator {
         return obsWithFaultyMeasure;
     }
 
-
-
     /**
      * Validate IC-17 All measures present in measures dimension cube: In a
      * qb:DataSet which uses a Measure dimension then if there is a Observation
@@ -586,7 +348,7 @@ public class Validator {
      * @return a map of observations with amount of other observations with
      * same dimension values.
      */
-    public Map<Resource, Integer> checkIC17() {
+    public Map<Resource, Integer> validateIC17() {
         String icName = "Integrity Constraint 17: All Measures Present In Measures Dimension Cube";
         logger.info("Validating " + icName);
         ValidatorIC17 validatorIC17 = new ValidatorIC17(model);
@@ -603,7 +365,7 @@ public class Validator {
      * @return a map of observations with correct datasets that should be
      * associated to.
      */
-    public Map<Resource, Resource> checkIC18() {
+    public Map<Resource, Resource> validateIC18() {
         String icName = "Integrity Constraint 18: Consistent Dataset Links";
         logger.info("Validating " + icName);
         ValidatorIC18 validatorIC18 = new ValidatorIC18(model);
@@ -620,7 +382,7 @@ public class Validator {
      * @return a map of values with a set of code lists not including the
      * values
      */
-    public Map<RDFNode, Set<RDFNode>> checkIC19() {
+    public Map<RDFNode, Set<RDFNode>> validateIC19() {
         String icName = "Integrity Constraint 19: Codes From Code List";
         logger.info("Validating " + icName);
         ValidatorIC19 validatorIC19 = new ValidatorIC19(model);
@@ -646,7 +408,7 @@ public class Validator {
      * including corresponding values with any parent child property along both
      * direct and inverse paths
      */
-    public List<Map<RDFNode, Set<RDFNode>>> checkIC20_21 () {
+    public List<Map<RDFNode, Set<RDFNode>>> validateIC20_21 () {
         String icName20 = "Integrity Constraint 20: Codes From Hierarchy";
         String icName21 = "Integrity Constraint 21: Codes From Hierarchy (Inverse)";
         logger.info("Validating " + icName20 + " & " +icName21);
@@ -713,83 +475,4 @@ public class Validator {
         }
         logger.debug("");
     }
-
-    private static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";
-    private static final String PREFIX_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-    private static final String PREFIX_RDFS = "http://www.w3.org/2000/01/rdf-schema#";
-    private static final String PREFIX_SKOS = "http://www.w3.org/2004/02/skos/core#";
-    private static final String PREFIX_OWL = "http://www.w3.org/2002/07/owl#";
-
-    private static final Property RDF_type = ResourceFactory.createProperty(
-            PREFIX_RDF + "type");
-    private static final Property QB_observation = ResourceFactory.createProperty(
-            PREFIX_CUBE + "observation");
-    private static final Property QB_Observation = ResourceFactory.createProperty(
-            PREFIX_CUBE + "Observation");
-    private static final Property QB_dataSet = ResourceFactory.createProperty(
-            PREFIX_CUBE + "dataSet");
-    private static final Property QB_DataSet = ResourceFactory.createProperty(
-            PREFIX_CUBE + "DataSet");
-    private static final Property QB_slice = ResourceFactory.createProperty(
-            PREFIX_CUBE + "slice");
-    private static final Property QB_Slice = ResourceFactory.createProperty(
-            PREFIX_CUBE + "Slice");
-    private static final Property QB_sliceKey = ResourceFactory.createProperty(
-            PREFIX_CUBE + "sliceKey");
-    private static final Property QB_SliceKey = ResourceFactory.createProperty(
-            PREFIX_CUBE + "SliceKey");
-    private static final Property QB_sliceStructure = ResourceFactory.createProperty(
-            PREFIX_CUBE + "sliceStructure");
-    private static final Property QB_component = ResourceFactory.createProperty(
-            PREFIX_CUBE + "component");
-    private static final Property QB_componentProperty = ResourceFactory.createProperty(
-            PREFIX_CUBE + "componentProperty");
-    private static final Property QB_DimensionProperty = ResourceFactory.createProperty(
-            PREFIX_CUBE + "DimensionProperty");
-    private static final Property QB_dimension = ResourceFactory.createProperty(
-            PREFIX_CUBE + "dimension");
-    private static final Property QB_MeasureProperty = ResourceFactory.createProperty(
-            PREFIX_CUBE + "MeasureProperty");
-    private static final Property QB_measure = ResourceFactory.createProperty(
-            PREFIX_CUBE + "measure");
-    private static final Property QB_measureType = ResourceFactory.createProperty(
-            PREFIX_CUBE + "measureType");
-    private static final Property QB_AttributeProperty = ResourceFactory.createProperty(
-            PREFIX_CUBE + "AttributeProperty");
-    private static final Property QB_attribute = ResourceFactory.createProperty(
-            PREFIX_CUBE + "attribute");
-    private static final Property QB_componentAttachment = ResourceFactory.createProperty(
-            PREFIX_CUBE + "componentAttachment");
-    private static final Property QB_componentRequired = ResourceFactory.createProperty(
-            PREFIX_CUBE + "componentRequired");
-    private static final Property QB_structure = ResourceFactory.createProperty(
-            PREFIX_CUBE + "structure");
-    private static final Property QB_DataStructureDefinition =
-            ResourceFactory.createProperty(PREFIX_CUBE + "DataStructureDefinition");
-    private static final Property QB_codeList = ResourceFactory.createProperty(
-            PREFIX_CUBE + "codeList");
-    private static final Property QB_HierarchicalCodeList = ResourceFactory.createProperty(
-            PREFIX_CUBE + "HierarchicalCodeList");
-    private static final Property QB_hierarchyRoot = ResourceFactory.createProperty(
-            PREFIX_CUBE + "hierarchyRoot");
-    private static final Property QB_parentChildProperty = ResourceFactory.createProperty(
-            PREFIX_CUBE + "parentChildProperty");
-    private static final Property RDFS_range = ResourceFactory.createProperty(
-            PREFIX_RDFS + "range");
-    private static final Property SKOS_Concept = ResourceFactory.createProperty(
-            PREFIX_SKOS + "Concept");
-    private static final Property SKOS_ConceptScheme = ResourceFactory.createProperty(
-            PREFIX_SKOS + "ConceptScheme");
-    private static final Property SKOS_inScheme = ResourceFactory.createProperty(
-            PREFIX_SKOS + "inScheme");
-    private static final Property SKOS_Collection = ResourceFactory.createProperty(
-            PREFIX_SKOS + "Collection");
-    private static final Property SKOS_member = ResourceFactory.createProperty(
-            PREFIX_SKOS + "member");
-    private static final Property OWL_inverseOf = ResourceFactory.createProperty(
-            PREFIX_OWL + "inverseOf");
-    private static final Literal LITERAL_FALSE = ResourceFactory.createTypedLiteral(
-            Boolean.FALSE);
-    private static final Literal LITERAL_TRUE = ResourceFactory.createTypedLiteral(
-            Boolean.TRUE);
 }

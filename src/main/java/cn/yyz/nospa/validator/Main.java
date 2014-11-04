@@ -1,5 +1,6 @@
 package cn.yyz.nospa.validator;
 
+import cn.yyz.nospa.validator.nonsparql.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
@@ -42,13 +43,12 @@ public class Main {
         }
 
         Validator validator = new Validator(inputPath, inputFormat);
-        validator.normalizePhase1();
-        validator.normalizePhase2();
+        validator.normalize();
 
         //long t1 = System.currentTimeMillis();
         //validator.normalizeBySparql();
         long t2 = System.currentTimeMillis();
-        validator.checkICAll();
+        validator.validateAll();
         long t3 = System.currentTimeMillis();
 
         //validator.exportModel(outputPath, outputFormat);
