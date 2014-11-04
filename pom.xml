@@ -6,7 +6,7 @@
 
     <groupId>cn.yyz.nospa</groupId>
     <artifactId>nospa-rdf-data-cube-validator</artifactId>
-    <version>0.9</version>
+    <version>0.9.5-Alpha</version>
 
     <dependencies>
         <dependency>
