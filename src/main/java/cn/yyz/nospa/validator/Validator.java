@@ -1,9 +1,6 @@
 package cn.yyz.nospa.validator;
 
-import cn.yyz.nospa.validator.nonsparql.ValidatorIC1;
-import cn.yyz.nospa.validator.nonsparql.ValidatorIC2;
-import cn.yyz.nospa.validator.nonsparql.ValidatorIC3;
-import cn.yyz.nospa.validator.nonsparql.ValidatorIC4;
+import cn.yyz.nospa.validator.nonsparql.*;
 import cn.yyz.nospa.validator.sparql.IntegrityConstraint;
 import cn.yyz.nospa.validator.sparql.NormalizationAlgorithm;
 import com.hp.hpl.jena.query.*;
@@ -396,15 +393,8 @@ public class Validator {
     public Set<Resource> checkIC5() {
         String icName = "Integrity Constraint 5: Concept Dimensions Have Code Lists";
         logger.info("Validating " + icName);
-        Set<Resource> dimWithoutCodeList = new HashSet<Resource>();
-        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-        objByProp.put(RDF_type, QB_DimensionProperty);
-        objByProp.put(RDFS_range, SKOS_Concept);
-        Set<Resource> dimSet = searchByMultipleProperty(null, objByProp);
-        for (Resource dimension : dimSet) {
-            NodeIterator codelistIterator = model.listObjectsOfProperty(dimension, QB_codeList);
-            if (!codelistIterator.hasNext()) dimWithoutCodeList.add(dimension);
-        }
+        ValidatorIC5 validatorIC5 = new ValidatorIC5(model);
+        Set<Resource> dimWithoutCodeList = validatorIC5.validate();
         String logMsg = "The following concept dimensions do not have a code list: ";
         logValidationResult(icName, dimWithoutCodeList, logMsg);
         return dimWithoutCodeList;
@@ -419,21 +409,8 @@ public class Validator {
     public Set<RDFNode> checkIC6() {
         String icName = "Integrity Constraint 6: Only Attributes May Be Optional";
         logger.info("Validating " + icName);
-        Set<RDFNode> compPropSet = new HashSet<RDFNode>();
-        Map<Property, RDFNode> objyByProp = new HashMap<Property, RDFNode>();
-        objyByProp.put(QB_componentRequired, LITERAL_FALSE);
-        Map<Resource, Map<Property, Set<RDFNode>>> compPropByCompSpec = searchByMultipleProperty(
-                null, objyByProp, Arrays.asList(QB_componentProperty));
-        Set<RDFNode> compSpecSet = model.listObjectsOfProperty(QB_component).toSet();
-        compSpecSet.retainAll(compPropByCompSpec.keySet());
-        for (RDFNode compSpec : compSpecSet) {
-            Resource compSpecAsRes = compSpec.asResource();
-            compPropSet.addAll(compPropByCompSpec
-                        .get(compSpecAsRes).get(QB_componentProperty));
-        }
-        Set<Resource> AttribWithDefSet = model.listSubjectsWithProperty(
-                RDF_type, QB_AttributeProperty).toSet();
-        compPropSet.removeAll(AttribWithDefSet);
+        ValidatorIC6 validatorIC6 = new ValidatorIC6(model);
+        Set<RDFNode> compPropSet = validatorIC6.validate();
         String logMsg = "The following component properties are not delared as attributes: ";
         logValidationResult(icName, compPropSet, logMsg);
         return compPropSet;
@@ -447,15 +424,8 @@ public class Validator {
     public Set<Resource> checkIC7() {
         String icName = "Integrity Constraint 7: Slice Keys Must Be Declared";
         logger.info("Validating " + icName);
-        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-        objByProp.put(RDF_type, QB_DataStructureDefinition);
-        Map<Resource, Map<Property, Set<RDFNode>>> sliceKeyByDSD =
-                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_sliceKey));
-        Set<Resource> sliceKeySet = model.listSubjectsWithProperty(RDF_type, QB_SliceKey).toSet();
-        for (Resource dsd : sliceKeyByDSD.keySet()) {
-            Set<RDFNode> sliceKeyInDSDSet = sliceKeyByDSD.get(dsd).get(QB_sliceKey);
-            sliceKeySet.removeAll(sliceKeyInDSDSet);
-        }
+        ValidatorIC7 validatorIC7 = new ValidatorIC7(model);
+        Set<Resource> sliceKeySet = validatorIC7.validate();
         String logMsg = "The following slice keys are not associated with DSDs: ";
         logValidationResult(icName, sliceKeySet, logMsg);
         return sliceKeySet;
@@ -470,27 +440,8 @@ public class Validator {
     public Set<RDFNode> checkIC8() {
         String icName = "Integrity Constraint 8: Slice Keys Consistent With DSD";
         logger.info("Validating " + icName);
-        Set<RDFNode> compWithoutDSD = new HashSet<RDFNode>();
-        List<Property> propPath = Arrays.asList(QB_component, QB_componentProperty);
-        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-        objByProp.put(RDF_type, QB_SliceKey);
-        Set<RDFNode> propSet = new HashSet<RDFNode>();
-        Map<Resource, Map<Property, Set<RDFNode>>> propBySliceKey =
-                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_componentProperty));
-        Map<Resource, Set<? extends RDFNode>> sliceKeyByDSD =
-                searchByPathVisit(null, Arrays.asList(QB_sliceKey), null);
-        for (Resource dsd : sliceKeyByDSD.keySet()) {
-            Set<? extends RDFNode> sliceKeySet = sliceKeyByDSD.get(dsd);
-            for (RDFNode sliceKey : sliceKeySet) {
-                if (propBySliceKey.containsKey(sliceKey.asResource()))
-                    propSet.addAll(propBySliceKey
-                        .get(sliceKey.asResource()).get(QB_componentProperty));
-            }
-            for (RDFNode property : propSet) {
-                if (!connectedByPropList(dsd, propPath, property))
-                    compWithoutDSD.add(property);
-            }
-        }
+        ValidatorIC8 validatorIC8 = new ValidatorIC8(model);
+        Set<RDFNode> compWithoutDSD = validatorIC8.validate();
         String logMsg = "The following component properties on slice keys are" +
                 " not associated with DSDs: ";
         logValidationResult(icName, compWithoutDSD, logMsg);
@@ -505,15 +456,8 @@ public class Validator {
     public Map<Resource, Set<RDFNode>> checkIC9() {
         String icName = "Integrity Constraint 9: Unique Slice Structure";
         logger.info("Validating " + icName);
-        Map<Resource, Set<RDFNode>> structBySlice =
-                new HashMap<Resource, Set<RDFNode>>();
-        Set<Resource> sliceSet = model.listSubjectsWithProperty(RDF_type, QB_Slice).toSet();
-        for (Resource slice : sliceSet) {
-            Set<RDFNode> sliceStructSet = model.listObjectsOfProperty(slice,
-                    QB_sliceStructure).toSet();
-            if (sliceStructSet.size() != 1) structBySlice.put(slice,
-                    sliceStructSet);
-        }
+        ValidatorIC9 validatorIC9 = new ValidatorIC9(model);
+        Map<Resource, Set<RDFNode>> structBySlice = validatorIC9.validate();
         String logMsg = " is associated with the following slice structures: ";
         logValidationResult(icName, structBySlice, logMsg);
         return structBySlice;
@@ -1261,103 +1205,6 @@ public class Validator {
         }
         return pcpByCodeList;
     }
-
-    /**
-     * Checks if a subject is connected to an object through a list of
-     * properties
-     * @param subject an RDF resource
-     * @param fixPropList a list of properties representing the property path
-     * @param object a candidate value associated to the resource through the
-     *               given property path
-     * @return a boolean value indicating if they are connected
-     */
-    private boolean connectedByPropList(Resource subject,
-                                        List<Property> fixPropList, RDFNode object) {
-        boolean isConnected = false;
-        Map<Resource, Set<? extends RDFNode>> objSetBySub = searchByPathVisit(subject,
-                fixPropList, null);
-
-        if (objSetBySub.containsKey(subject)) {
-            if (objSetBySub.get(subject).contains(object)) isConnected = true;
-        }
-        return isConnected;
-    }
-
-    /**
-     * Checks if a subject is connected to an object through a list of
-     * properties and a repetitive property
-     * @param subject an RDF resource
-     * @param fixPropList a list of properties representing the property path
-     * @param repProp a property that could be repeated for multiple times
-     *                appending to the end of the property path
-     * @param object a candidate value associated to the resource through the
-     *               given property path
-     * @param isDirect indicate the direction of the property path (direct or
-     *                 inverse)
-     * @return a boolean value indicating if they are connected
-     */
-    private boolean connectedByRepeatedProp(Resource subject, List<Property> fixPropList,
-                                            Property repProp, RDFNode object,
-                                            boolean isDirect) {
-        boolean isConnected = false;
-        Map<Resource, Set<? extends RDFNode>> objSetBySub = searchByPathVisit(subject,
-                fixPropList, null);
-        Set<? extends RDFNode> objectSet = objSetBySub.get(subject);
-        if (objectSet.contains(object)) return true;
-        for (RDFNode objOfPropPath : objectSet) {
-            if (connectedByRepeatedProp(objOfPropPath.asResource(),
-                    repProp, object, isDirect)) {
-                isConnected = true;
-                break;
-            }
-        }
-        return isConnected;
-    }
-
-    /**
-     * Checks if a subject is connected to an object through a repetitive
-     * property
-     * @param subject an RDF resource
-     * @param repProp a property that could be repeated for multiple times
-     *                appending to the end of the fix property list
-     * @param object a candidate value associated to the resource through the
-     *               given property path
-     * @param isDirect indicate the direction of the property path (direct or
-     *                 inverse)
-     * @return a boolean value indicating if they are connected
-     */
-    private boolean connectedByRepeatedProp(Resource subject, Property repProp,
-                                            RDFNode object, boolean isDirect) {
-        if (isDirect) return connectedByRepeatedProp(subject, repProp, object);
-        else return connectedByRepeatedProp(object.asResource(), repProp, subject);
-    }
-
-    /**
-     * Checks if a subject is connected to an object through a repetitive
-     * property
-     * @param subject an RDF resource
-     * @param repProp a property that could be repeated for multiple times
-     *                appending to the end of the fix property list
-     * @param object a candidate value associated to the resource through the
-     *               given property path
-     * @return a boolean value indicating if they are connected
-     */
-    private boolean connectedByRepeatedProp(Resource subject, Property repProp,
-                                            RDFNode object) {
-        boolean isConnected = false;
-        Set<RDFNode> objectSet = searchObjectsOfProperty(Collections.singleton(subject),
-                repProp);
-        while (!objectSet.isEmpty()) {
-            if (objectSet.contains(object)) {
-                isConnected = true;
-                break;
-            }
-            else objectSet = searchObjectsOfProperty(nodeToResource(objectSet), repProp);
-        }
-        return isConnected;
-    }
-
-
 
     /**
      * Logs the results of a validation

@@ -189,7 +189,102 @@ public class ValidatorBase {
         }
         return propSet;
     }
-    
+
+    /**
+     * Checks if a subject is connected to an object through a list of
+     * properties
+     * @param subject an RDF resource
+     * @param fixPropList a list of properties representing the property path
+     * @param object a candidate value associated to the resource through the
+     *               given property path
+     * @return a boolean value indicating if they are connected
+     */
+    protected boolean connectedByPropList(Resource subject,
+                                        List<Property> fixPropList, RDFNode object) {
+        boolean isConnected = false;
+        Map<Resource, Set<? extends RDFNode>> objSetBySub = searchByPathVisit(subject,
+                fixPropList, null);
+
+        if (objSetBySub.containsKey(subject)) {
+            if (objSetBySub.get(subject).contains(object)) isConnected = true;
+        }
+        return isConnected;
+    }
+
+    /**
+     * Checks if a subject is connected to an object through a list of
+     * properties and a repetitive property
+     * @param subject an RDF resource
+     * @param fixPropList a list of properties representing the property path
+     * @param repProp a property that could be repeated for multiple times
+     *                appending to the end of the property path
+     * @param object a candidate value associated to the resource through the
+     *               given property path
+     * @param isDirect indicate the direction of the property path (direct or
+     *                 inverse)
+     * @return a boolean value indicating if they are connected
+     */
+    protected boolean connectedByRepeatedProp(Resource subject, List<Property> fixPropList,
+                                            Property repProp, RDFNode object,
+                                            boolean isDirect) {
+        boolean isConnected = false;
+        Map<Resource, Set<? extends RDFNode>> objSetBySub = searchByPathVisit(subject,
+                fixPropList, null);
+        Set<? extends RDFNode> objectSet = objSetBySub.get(subject);
+        if (objectSet.contains(object)) return true;
+        for (RDFNode objOfPropPath : objectSet) {
+            if (connectedByRepeatedProp(objOfPropPath.asResource(),
+                    repProp, object, isDirect)) {
+                isConnected = true;
+                break;
+            }
+        }
+        return isConnected;
+    }
+
+    /**
+     * Checks if a subject is connected to an object through a repetitive
+     * property
+     * @param subject an RDF resource
+     * @param repProp a property that could be repeated for multiple times
+     *                appending to the end of the fix property list
+     * @param object a candidate value associated to the resource through the
+     *               given property path
+     * @param isDirect indicate the direction of the property path (direct or
+     *                 inverse)
+     * @return a boolean value indicating if they are connected
+     */
+    protected boolean connectedByRepeatedProp(Resource subject, Property repProp,
+                                            RDFNode object, boolean isDirect) {
+        if (isDirect) return connectedByRepeatedProp(subject, repProp, object);
+        else return connectedByRepeatedProp(object.asResource(), repProp, subject);
+    }
+
+    /**
+     * Checks if a subject is connected to an object through a repetitive
+     * property
+     * @param subject an RDF resource
+     * @param repProp a property that could be repeated for multiple times
+     *                appending to the end of the fix property list
+     * @param object a candidate value associated to the resource through the
+     *               given property path
+     * @return a boolean value indicating if they are connected
+     */
+    protected boolean connectedByRepeatedProp(Resource subject, Property repProp,
+                                            RDFNode object) {
+        boolean isConnected = false;
+        Set<RDFNode> objectSet = searchObjectsOfProperty(Collections.singleton(subject),
+                repProp);
+        while (!objectSet.isEmpty()) {
+            if (objectSet.contains(object)) {
+                isConnected = true;
+                break;
+            }
+            else objectSet = searchObjectsOfProperty(nodeToResource(objectSet), repProp);
+        }
+        return isConnected;
+    }
+
     protected static final String PREFIX_CUBE = "http://purl.org/linked-data/cube#";
     protected static final String PREFIX_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     protected static final String PREFIX_RDFS = "http://www.w3.org/2000/01/rdf-schema#";
