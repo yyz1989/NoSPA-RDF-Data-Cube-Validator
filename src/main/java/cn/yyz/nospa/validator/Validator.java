@@ -471,18 +471,8 @@ public class Validator {
     public Map<Resource, Set<RDFNode>> checkIC10() {
         String icName = "Integrity Constraint 10: Slice Dimensions Complete";
         logger.info("Validating " + icName);
-        Map<Resource, Set<RDFNode>> dimBySliceWithoutVal = new HashMap<Resource, Set<RDFNode>>();
-        List<Property> propPath = Arrays.asList(QB_sliceStructure, QB_componentProperty);
-        Map<Resource, Set<? extends RDFNode>> dimBySlice = searchByPathVisit(null, propPath, null);
-        for (Resource slice : dimBySlice.keySet()) {
-            Set<RDFNode> dimWithoutValSet = new HashSet<RDFNode>();
-            for (RDFNode dim : dimBySlice.get(slice)) {
-                Property dimAsProp = ResourceFactory.createProperty(dim.asResource().getURI());
-                NodeIterator valIter = model.listObjectsOfProperty(slice, dimAsProp);
-                if (!valIter.hasNext()) dimWithoutValSet.add(dim);
-            }
-            if (!dimWithoutValSet.isEmpty()) dimBySliceWithoutVal.put(slice, dimWithoutValSet);
-        }
+        ValidatorIC10 validatorIC10 = new ValidatorIC10(model);
+        Map<Resource, Set<RDFNode>> dimBySliceWithoutVal = validatorIC10.validate();
         String logMsg = " does not have values for the following dimensions: ";
         logValidationResult(icName, dimBySliceWithoutVal, logMsg);
         return dimBySliceWithoutVal;
@@ -500,30 +490,9 @@ public class Validator {
         String icName11 = "Integrity Constraint 11: All Dimensions Required";
         String icName12 = "Integrity Constraint 12: No Duplicate Observations";
         logger.info("Validating " + icName11 + " & " + icName12);
-        Map<Resource, Set<RDFNode>> faultyObs = new HashMap<Resource, Set<RDFNode>>();
+        ValidatorIC11_12 validatorIC11_12 = new ValidatorIC11_12(model);
+        Map<Resource, Set<RDFNode>> faultyObs = validatorIC11_12.validate();
         Set<Resource> duplicateObsSet = new HashSet<Resource>();
-        Map<Resource, Set<Resource>> obsByDataset =
-                new HashMap<Resource, Set<Resource>>();
-        List<Property> propPath = Arrays.asList(QB_structure,
-                QB_component, QB_componentProperty);
-        Map<Resource, Set<? extends RDFNode>> dimByDataset = searchByPathVisit(
-                null, propPath, null);
-        Set<Resource> dimWithDef = model.listResourcesWithProperty(RDF_type,
-                QB_DimensionProperty).toSet();
-        for (Resource dataset : dimByDataset.keySet()) {
-            Set<? extends RDFNode> dimInDataset = dimByDataset.get(dataset);
-            dimInDataset.retainAll(dimWithDef);
-            dimByDataset.put(dataset, dimInDataset);
-
-            obsByDataset.put(dataset,
-                    model.listSubjectsWithProperty(QB_dataSet, dataset).toSet());
-        }
-        for (Resource dataset : obsByDataset.keySet()) {
-            Set<Resource> obsSet = obsByDataset.get(dataset);
-            Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
-            faultyObs.putAll(dimValueCheck(obsSet, dimSet));
-        }
-
         for (Resource obs : faultyObs.keySet()) {
             if (faultyObs.get(obs).isEmpty()) duplicateObsSet.add(obs);
         }
@@ -539,37 +508,6 @@ public class Validator {
         return faultyObs;
     }
 
-    /**
-     * This function is a subtask of function checkIC11_12 for checking the
-     * values of a set of observations for a set of dimensions.
-     * @param obsSet a set of observations
-     * @param dimSet a set of dimension properties
-     * @return a map of faulty observations with dimension property set missing
-     * corresponding values. If the set is empty then the observation is
-     * duplicated.
-     */
-    private Map<Resource, Set<RDFNode>> dimValueCheck (Set<Resource> obsSet,
-                                                  Set<? extends RDFNode> dimSet) {
-        Map<Resource, Set<RDFNode>> faultyObs = new HashMap<Resource, Set<RDFNode>>();
-        Map<Resource, Set<RDFNode>> valueSetByObs = new HashMap<Resource, Set<RDFNode>>();
-        Set<Property> dimAsPropSet = nodeToProperty(dimSet);
-        for (Resource obs : obsSet) {
-            Set<RDFNode> valueSet = new HashSet<RDFNode>();
-            Set<RDFNode> dimWithoutValSet = new HashSet<RDFNode>();
-            for (Property dim : dimAsPropSet) {
-                NodeIterator valueIter = model.listObjectsOfProperty(obs, dim);
-                if (!valueIter.hasNext()) dimWithoutValSet.add(dim);
-                else valueSet.add(valueIter.next());
-            }
-            if (!dimWithoutValSet.isEmpty()) faultyObs.put(obs, dimWithoutValSet);
-            else {
-                if (valueSetByObs.containsValue(valueSet)) faultyObs.put(obs,
-                        dimWithoutValSet);
-                else valueSetByObs.put(obs, valueSet);
-            }
-        }
-        return faultyObs;
-    }
 
     /**
      * Validate IC-13 Required attributes: Every qb:Observation has a value for
@@ -579,54 +517,13 @@ public class Validator {
     public Map<Resource, Set<RDFNode>> checkIC13() {
         String icName = "Integrity Constraint 13: Required Attributes";
         logger.info("Validating " + icName);
-        Map<Resource, Set<RDFNode>> obsWithoutAttribVal =
-                new HashMap<Resource, Set<RDFNode>>();
-        List<Property> propPath = Arrays.asList(QB_structure, QB_component);
-        Map<Resource, Set<? extends RDFNode>> compByDataset = searchByPathVisit(
-                null, propPath, null);
-        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-        objByProp.put(QB_componentRequired, LITERAL_TRUE);
-        Map<Resource, Map<Property, Set<RDFNode>>> attribByComp = searchByMultipleProperty(null,
-                objByProp, Arrays.asList(QB_componentProperty));
-        for (Resource dataset : compByDataset.keySet()) {
-            Set<? extends RDFNode> compSet = compByDataset.get(dataset);
-            Set<RDFNode> attribSet = new HashSet<RDFNode>();
-            compSet.retainAll(attribByComp.keySet());
-            for (RDFNode component : compSet) {
-                attribSet.addAll(attribByComp.get(component.asResource())
-                        .get(QB_componentProperty));
-            }
-            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
-            obsWithoutAttribVal.putAll(attribValueCheck(obsSet, attribSet));
-        }
+        ValidatorIC13 validatorIC13 = new ValidatorIC13(model);
+        Map<Resource, Set<RDFNode>> obsWithoutAttribVal = validatorIC13.validate();
         String logMsg = " does not have values for the following required attributes: ";
         logValidationResult(icName, obsWithoutAttribVal, logMsg);
         return obsWithoutAttribVal;
     }
 
-    /**
-     * This function is a subtask of function checkIC13 for checking the values
-     * of a set of attribute properties for a set of observations.
-     * @param obsSet a set of observations
-     * @param attribSet a set of attribute properties
-     * @return a map of observations with attribute properties missing values
-     */
-    private Map<Resource, Set<RDFNode>> attribValueCheck (Set<Resource> obsSet,
-                                                     Set<RDFNode> attribSet) {
-        Map<Resource, Set<RDFNode>> obsWithoutAttribVal =
-                new HashMap<Resource, Set<RDFNode>>();
-        Set<Property> attribAsPropSet = nodeToProperty(attribSet);
-        for (Resource obs : obsSet) {
-            Set<RDFNode> attribPropWithoutValSet = new HashSet<RDFNode>();
-            for (Property attribProp : attribAsPropSet) {
-                if (!model.listObjectsOfProperty(obs, attribProp).hasNext())
-                    attribPropWithoutValSet.add(attribProp);
-            }
-            if (!attribPropWithoutValSet.isEmpty())
-                obsWithoutAttribVal.put(obs, attribPropWithoutValSet);
-        }
-        return obsWithoutAttribVal;
-    }
 
     /**
      * Validate IC-14 All measures present: In a qb:DataSet which does not use
@@ -637,49 +534,14 @@ public class Validator {
     public Map<Resource, Set<RDFNode>> checkIC14() {
         String icName = "Integrity Constraint 14: All Measures Present";
         logger.info("Validating " + icName);
-        Map<Resource, Set<RDFNode>> obsWithoutMeasureVal =
-                new HashMap<Resource, Set<RDFNode>>();
-        List<Property> propPath = Arrays.asList(QB_structure, QB_component, QB_componentProperty);
-        Map<Resource, Set<? extends RDFNode>> compPropSetByDataset = searchByPathVisit(null,
-                propPath, null);
-        Set<Resource> measureSet = model.listSubjectsWithProperty(RDF_type,
-                ResourceFactory.createProperty(QB_MeasureProperty.getURI())).toSet();
-        for (Resource dataset : compPropSetByDataset.keySet()) {
-            Set<? extends RDFNode> compPropSet = compPropSetByDataset.get(dataset);
-            if (!compPropSet.contains(QB_measureType)) {
-                compPropSet.retainAll(measureSet);
-            }
-            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
-            obsWithoutMeasureVal.putAll(measureValueCheck(obsSet, compPropSet));
-        }
+        ValidatorIC14 validatorIC14 = new ValidatorIC14(model);
+        Map<Resource, Set<RDFNode>> obsWithoutMeasureVal = validatorIC14.validate();
         String logMsg = " does not have values for the following declared measures: ";
         logValidationResult(icName, obsWithoutMeasureVal, logMsg);
         return obsWithoutMeasureVal;
     }
 
-    /**
-     * This function is a subtask of checkIC14 for checking the values of a set
-     * of measures for a set of observations.
-     * @param obsSet a set of observations
-     * @param measureSet a set of measures
-     * @return a map of observations with a set of measures missing values
-     */
-    private Map<Resource, Set<RDFNode>> measureValueCheck (Set<Resource> obsSet,
-                                                      Set<? extends RDFNode> measureSet) {
-        Map<Resource, Set<RDFNode>> obsWithoutMeasureVal =
-                new HashMap<Resource, Set<RDFNode>>();
-        Set<Property> measureAsPropSet = nodeToProperty(measureSet);
-        for (Resource obs : obsSet) {
-            Set<RDFNode> measureWithoutValSet = new HashSet<RDFNode>();
-            for (Property measure : measureAsPropSet) {
-                if (!model.listObjectsOfProperty(obs, measure).hasNext())
-                    measureWithoutValSet.add(measure);
-            }
-            if (!measureWithoutValSet.isEmpty())
-                obsWithoutMeasureVal.put(obs, measureWithoutValSet);
-        }
-        return obsWithoutMeasureVal;
-    }
+
 
     /**
      * Validate IC-15 Measure dimension consistent: In a qb:DataSet which uses
