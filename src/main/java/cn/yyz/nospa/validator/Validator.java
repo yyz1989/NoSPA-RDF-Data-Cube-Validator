@@ -557,22 +557,8 @@ public class Validator {
         String icName15 = "Integrity Constraint 15: Measure Dimension Consistent";
         String icName16 = "Integrity Constraint 16: Single Measure On Measure Dimension Observation";
         logger.info("Validating " + icName15 + " & " + icName16);
-        Map<Resource, Set<RDFNode>> obsWithFaultyMeasure = new HashMap<Resource, Set<RDFNode>>();
-        List<Property> propPath = Arrays.asList(QB_structure, QB_component,
-                QB_componentProperty);
-        Map<Resource, Set<? extends RDFNode>> compPropSetByDataset = searchByPathVisit(null,
-                propPath, null);
-        Set<Resource> measurePropSet = model.listSubjectsWithProperty(RDF_type,
-                ResourceFactory.createProperty(QB_MeasureProperty.getURI())).toSet();
-        for (Resource dataset : compPropSetByDataset.keySet()) {
-            Set<? extends RDFNode> compPropSet = compPropSetByDataset.get(dataset);
-            if (compPropSet.contains(QB_measureType)) {
-                compPropSet.retainAll(measurePropSet);
-                Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
-                obsWithFaultyMeasure.putAll(measureTypeValueCheck(obsSet, compPropSet));
-            }
-        }
-
+        ValidatorIC15_16 validatorIC15_16 = new ValidatorIC15_16(model);
+        Map<Resource, Set<RDFNode>> obsWithFaultyMeasure = validatorIC15_16.validate();
         Map<Resource, Set<RDFNode>> obsWithoutMeasureVal =
                 new HashMap<Resource, Set<RDFNode>>(obsWithFaultyMeasure);
         Map<Resource, Set<RDFNode>> obsWithMultipleMeasure =
@@ -586,37 +572,10 @@ public class Validator {
         String logMsg16 = " has the following multiple measures: ";
         logValidationResult(icName15, obsWithoutMeasureVal, logMsg15);
         logValidationResult(icName16, obsWithMultipleMeasure, logMsg16);
-
         return obsWithFaultyMeasure;
     }
 
-    /**
-     * This function is a subtask of function checkIC15_16 for checking values
-     * of a set of measures for a set of observations.
-     * @param obsSet a set of observations
-     * @param measureSet a set of measures
-     * @return a map of faulty observations with measures missing values
-     */
-    private Map<Resource, Set<RDFNode>> measureTypeValueCheck (Set<Resource> obsSet,
-                                                               Set<? extends RDFNode> measureSet) {
-        Map<Resource, Set<RDFNode>> obsWithFaultyMeasure = new HashMap<Resource, Set<RDFNode>>();
-        for (Resource obs : obsSet) {
-            Set<RDFNode> measurePropInObs = model.listObjectsOfProperty(obs,
-                    QB_measureType).toSet();
-            if (measurePropInObs.size() !=1) {
-                obsWithFaultyMeasure.put(obs, measurePropInObs);
-            }
-            else {
-                Property measureProp = ResourceFactory.createProperty(
-                        measurePropInObs.iterator().next().asResource().getURI());
-                Set<RDFNode> measurePropValSet =
-                        model.listObjectsOfProperty(obs, measureProp).toSet();
-                if (!measureSet.contains(measureProp) || measurePropValSet.size() != 1)
-                    obsWithFaultyMeasure.put(obs, measurePropInObs);
-            }
-        }
-        return obsWithFaultyMeasure;
-    }
+
 
     /**
      * Validate IC-17 All measures present in measures dimension cube: In a
@@ -630,79 +589,11 @@ public class Validator {
     public Map<Resource, Integer> checkIC17() {
         String icName = "Integrity Constraint 17: All Measures Present In Measures Dimension Cube";
         logger.info("Validating " + icName);
-        Map<Resource, Integer> numObs2ByObs1 = new HashMap<Resource, Integer>();
-        List<Property> propPath = Arrays.asList(QB_structure,
-                QB_component, QB_componentProperty);
-        Map<Resource, Set<? extends RDFNode>> compPropByDataset = searchByPathVisit(
-                null, propPath, null);
-        Set<Resource> measPropWithDef = model.listResourcesWithProperty(RDF_type,
-                QB_MeasureProperty).toSet();
-        Set<Resource> dimPropWithDef = model.listResourcesWithProperty(RDF_type,
-                QB_DimensionProperty).toSet();
-        Set<Resource> obsWithMeasure = model.listResourcesWithProperty(QB_measureType).toSet();
-        for (Resource dataset : compPropByDataset.keySet()) {
-            Set<? extends RDFNode> compPropSet = compPropByDataset.get(dataset);
-            Set<? extends RDFNode> dimPropSet = new HashSet<RDFNode>(compPropSet);
-            compPropSet.retainAll(measPropWithDef);
-            int numOfMeasure = compPropSet.size();
-
-            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
-            obsSet.retainAll(obsWithMeasure);
-            if (obsSet.size() == 0) continue;
-
-            dimPropSet.retainAll(dimPropWithDef);
-            for (RDFNode dim : dimPropSet) {
-                if (dim.equals(QB_measureType)) dimPropSet.remove(dim);
-            }
-
-            Map<Resource, Set<Resource>> unqualifiedObsPair =
-                    unqualifiedObsPairCheck(obsSet, dimPropSet);
-            int numOfObs1 = unqualifiedObsPair.keySet().size();
-            for (Resource obs : unqualifiedObsPair.keySet()) {
-                int numOfObs2 = unqualifiedObsPair.get(obs).size();
-                if (numOfObs1 - numOfObs2 != numOfMeasure)
-                    numObs2ByObs1.put(obs, numOfObs2);
-            }
-        }
+        ValidatorIC17 validatorIC17 = new ValidatorIC17(model);
+        Map<Resource, Integer> numObs2ByObs1 = validatorIC17.validate();
         String logMsg = " shares the same dimension values with the following number of observations";
         logValidationResult(icName, numObs2ByObs1, logMsg);
         return numObs2ByObs1;
-    }
-
-    /**
-     * This function is a subtask of checkIC17 for checking observations with
-     * same dimension property structure as each observation given in the set
-     * @param obsSet a set of observations
-     * @param dimPropSet a set of dimension properties
-     * @return a map of observations with a set of corresponding observations
-     * with same dimension property structure
-     */
-    public Map<Resource, Set<Resource>> unqualifiedObsPairCheck (
-            Set<Resource> obsSet,
-            Set<? extends RDFNode> dimPropSet) {
-        Set<Property> dimAsPropSet = nodeToProperty(dimPropSet);
-        Map<Resource, Set<Resource>> unqualifiedObsPair =
-                new HashMap<Resource, Set<Resource>>();
-        for (Resource obs1 : obsSet) {
-            Set<Resource> unqualifiedObsSet = new HashSet<Resource>();
-            for (Resource obs2 : obsSet) {
-                boolean isEqual = true;
-                for (Property dim : dimAsPropSet) {
-                    Set<RDFNode> valueSet1 = model.listObjectsOfProperty(obs1, dim).toSet();
-                    Set<RDFNode> valueSet2 = model.listObjectsOfProperty(obs2, dim).toSet();
-                    if (valueSet1.size() != 1 || valueSet2.size() != 1) continue;
-                    RDFNode value1 = valueSet1.iterator().next();
-                    RDFNode value2 = valueSet2.iterator().next();
-                    if (!value1.equals(value2)) {
-                        isEqual = false;
-                        break;
-                    }
-                }
-                if (!isEqual) unqualifiedObsSet.add(obs2);
-            }
-            unqualifiedObsPair.put(obs1, unqualifiedObsSet);
-        }
-        return unqualifiedObsPair;
     }
 
     /**
@@ -715,18 +606,8 @@ public class Validator {
     public Map<Resource, Resource> checkIC18() {
         String icName = "Integrity Constraint 18: Consistent Dataset Links";
         logger.info("Validating " + icName);
-        Map<Resource, Resource> obsNotInDataset = new HashMap<Resource, Resource>();
-        Property[] properties = {QB_slice, QB_observation};
-        Map<Resource, Set<? extends RDFNode>> obsByDataset = searchByPathVisit(null,
-                Arrays.asList(properties), null);
-        for (Resource dataset : obsByDataset.keySet()) {
-            Set<? extends RDFNode> obsSet = obsByDataset.get(dataset);
-            for (RDFNode obs : obsSet) {
-                Resource obsAsRes = obs.asResource();
-                if (!model.listStatements(obsAsRes, QB_dataSet, dataset).hasNext())
-                    obsNotInDataset.put(obsAsRes, dataset);
-            }
-        }
+        ValidatorIC18 validatorIC18 = new ValidatorIC18(model);
+        Map<Resource, Resource> obsNotInDataset = validatorIC18.validate();
         String logMsg = " should be associated to the following dataset: ";
         logValidationResult(icName, obsNotInDataset, logMsg);
         return obsNotInDataset;
@@ -742,144 +623,13 @@ public class Validator {
     public Map<RDFNode, Set<RDFNode>> checkIC19() {
         String icName = "Integrity Constraint 19: Codes From Code List";
         logger.info("Validating " + icName);
-        Map<RDFNode, Set<RDFNode>> valNotInCodeList = new HashMap<RDFNode, Set<RDFNode>>();
-        Map<RDFNode, Set<? extends RDFNode>> conceptCLByDim =
-                new HashMap<RDFNode, Set<? extends RDFNode>>();
-        Map<RDFNode, Set<? extends RDFNode>> collectionCLByDim =
-                new HashMap<RDFNode, Set<? extends RDFNode>>();
-        Set<Resource> conceptCLWithDefSet = model.listSubjectsWithProperty(RDF_type,
-                SKOS_ConceptScheme).toSet();
-        Set<Resource> collectionCLWithDefSet = model.listSubjectsWithProperty(RDF_type,
-                SKOS_Collection).toSet();
-        Map<Resource, Set<? extends RDFNode>> dimByDataset = searchByPathVisit(null,
-                Arrays.asList(QB_structure, QB_component, QB_componentProperty), null);
-        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-        objByProp.put(RDF_type, QB_DimensionProperty);
-        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
-                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_codeList));
-        for (Resource dataset : dimByDataset.keySet()) {
-            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
-            Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
-            dimSet.retainAll(objBySubAndProp.keySet());
-            for (RDFNode dim : dimSet) {
-                Set<RDFNode> conceptCLSet = objBySubAndProp.get(dim.asResource()).get(QB_codeList);
-                Set<RDFNode> collectionCLSet = new HashSet<RDFNode>(conceptCLSet);
-                conceptCLSet.retainAll(conceptCLWithDefSet);
-                collectionCLSet.retainAll(collectionCLWithDefSet);
-                if (!conceptCLSet.isEmpty()) conceptCLByDim.put(dim, conceptCLSet);
-                if (!collectionCLSet.isEmpty()) collectionCLByDim.put(dim, collectionCLSet);
-            }
-            valNotInCodeList.putAll(obsWithFaultyDimCheck(obsSet, conceptCLByDim,
-                    collectionCLByDim));
-        }
+        ValidatorIC19 validatorIC19 = new ValidatorIC19(model);
+        Map<RDFNode, Set<RDFNode>> valNotInCodeList = validatorIC19.validate();
         String logMsg = " is not included in the following code lists: ";
         logValidationResult(icName, valNotInCodeList, logMsg);
         return valNotInCodeList;
     }
 
-    /**
-     * This function is a subtask of function checkIC19 to check if the
-     * dimension values of a set of observations match the given code lists
-     * @param obsSet a set of observations
-     * @param conceptCLByDim a map of dimensions with corresponding code lists
-     *                       of the ConceptScheme type
-     * @param collectionCLByDim a map of dimensions with corresponding code
-     *                          lists of the Collection type
-     * @return a map of values with a set of code lists not including the
-     * values
-     */
-    private Map<RDFNode, Set<RDFNode>> obsWithFaultyDimCheck (Set<Resource> obsSet,
-            Map<RDFNode, Set<? extends RDFNode>> conceptCLByDim,
-            Map<RDFNode, Set<? extends RDFNode>> collectionCLByDim) {
-        Map<RDFNode, Set<RDFNode>> valNotInCodeList = new HashMap<RDFNode, Set<RDFNode>>();
-        Set<Property> dimWithConcept = nodeToProperty(conceptCLByDim.keySet());
-        Set<Property> dimWithCollection = nodeToProperty(collectionCLByDim.keySet());
-        for (Resource obs : obsSet) {
-            Map<RDFNode, Set<RDFNode>> valNotInConceptCL =
-                    dimValueCheck(true, obs, dimWithConcept, conceptCLByDim);
-            Map<RDFNode, Set<RDFNode>> valNotInCollectionCL =
-                    dimValueCheck(false, obs, dimWithCollection, collectionCLByDim);
-            for (RDFNode value : valNotInConceptCL.keySet()) {
-                if (valNotInCodeList.containsKey(value)) {
-                    Set<RDFNode> codeList = valNotInCodeList.get(value);
-                    codeList.addAll(valNotInConceptCL.get(value));
-                    valNotInCodeList.put(value, codeList);
-                }
-                else valNotInCodeList.put(value, valNotInConceptCL.get(value));
-            }
-            for (RDFNode value : valNotInCollectionCL.keySet()) {
-                if (valNotInCodeList.containsKey(value)) {
-                    Set<RDFNode> codeList = valNotInCodeList.get(value);
-                    codeList.addAll(valNotInCollectionCL.get(value));
-                    valNotInCodeList.put(value, codeList);
-                }
-                else valNotInCodeList.put(value, valNotInCollectionCL.get(value));
-            }
-        }
-        return valNotInCodeList;
-    }
-
-    /**
-     * This function is a subtask of function checkIC19 to check if the
-     * dimension values of an observation matches one of the given code lists
-     * @param isConceptList indicates the type of code list, true for Concept
-     *                      Scheme and false for Collection.
-     * @param obs an observation
-     * @param dimAsPropSet a set of properties of the given observation
-     * @param codeListByDim a set of candidate code lists for the given
-     *                      properties
-     * @return a map of values with a set of code lists not including the
-     * values
-     */
-    private Map<RDFNode, Set<RDFNode>> dimValueCheck (boolean isConceptList,
-                Resource obs, Set<Property> dimAsPropSet,
-                Map<RDFNode, Set<? extends RDFNode>> codeListByDim) {
-        Map<RDFNode, Set<RDFNode>> valNotInCodeList = new HashMap<RDFNode, Set<RDFNode>>();
-        for (Property dimAsProp : dimAsPropSet) {
-            Set<RDFNode> valueSet = model.listObjectsOfProperty(obs, dimAsProp).toSet();
-            if (valueSet.size() == 1) {
-                RDFNode value = valueSet.iterator().next();
-                Set<RDFNode> codeList = new HashSet<RDFNode>();
-                codeList.addAll(codeListByDim.get(dimAsProp));
-                if (!value.isURIResource() || !connectedToCodeList(isConceptList,
-                        value.asResource(), codeList)) {
-                    if (valNotInCodeList.containsKey(value)) {
-                        Set<RDFNode> cl = valNotInCodeList.get(value);
-                        cl.addAll(codeList);
-                        valNotInCodeList.put(value, cl);
-                    } else {
-                        valNotInCodeList.put(value, codeList);
-                    }
-                }
-            }
-        }
-        return valNotInCodeList;
-    }
-
-    /**
-     * This function is a subtask of function checkIC19 to check if the given
-     * value is included in a code list.
-     * @param isConceptList indicates the type of code list, true for Concept
-     *                      Scheme and false for Collection.
-     * @param value value of a dimension property
-     * @param codeListSet a set of candidate code lists
-     * @return a boolean value indicating if the value is included in a code
-     * list
-     */
-    private boolean connectedToCodeList (boolean isConceptList, Resource value,
-                                         Set<? extends RDFNode> codeListSet) {
-        boolean isConnected = false;
-        if (!model.listStatements(value, RDF_type, SKOS_Concept).hasNext())
-            return false;
-        for (RDFNode codelist : codeListSet) {
-            if (isConceptList)
-                isConnected = model.listStatements(value, SKOS_inScheme, codelist).hasNext();
-            else
-                isConnected = connectedByRepeatedProp(codelist.asResource(), SKOS_member, value);
-            if (isConnected) break;
-        }
-        return isConnected;
-    }
 
     /**
      * Validate IC-20 Codes from hierarchy: If a dimension property has a
@@ -900,172 +650,14 @@ public class Validator {
         String icName20 = "Integrity Constraint 20: Codes From Hierarchy";
         String icName21 = "Integrity Constraint 21: Codes From Hierarchy (Inverse)";
         logger.info("Validating " + icName20 + " & " +icName21);
-        Map<RDFNode, Set<RDFNode>> valNotInCodeListByDirPcp =
-                new HashMap<RDFNode, Set<RDFNode>>();
-        Map<RDFNode, Set<RDFNode>> valNotInCodeListByInvPcp =
-                new HashMap<RDFNode, Set<RDFNode>>();
+        ValidatorIC20_21 validatorIC20_21 = new ValidatorIC20_21(model);
         List<Map<RDFNode, Set<RDFNode>>> valNotInCodeListByPcp =
-                new ArrayList<Map<RDFNode, Set<RDFNode>>>();
-        Map<Resource, Map<String, Set<Property>>> pcpByCodeList = getPcpByCodeList();
-        Set<Resource> codeListWithDefSet = model.listResourcesWithProperty(RDF_type,
-                QB_HierarchicalCodeList).toSet();
-        Map<Resource, Set<? extends RDFNode>> dimByDataset = searchByPathVisit(null,
-                Arrays.asList(QB_structure, QB_component, QB_componentProperty), null);
-        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-        objByProp.put(RDF_type, QB_DimensionProperty);
-        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
-                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_codeList));
-        for (Resource dataset : dimByDataset.keySet()) {
-            Map<Property, Set<RDFNode>> codeListByDim = new HashMap<Property, Set<RDFNode>>();
-            Set<Resource> obsSet = model.listSubjectsWithProperty(QB_dataSet, dataset).toSet();
-            Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
-            dimSet.retainAll(objBySubAndProp.keySet());
-            for (RDFNode dim : dimSet) {
-                Set<RDFNode> codeListSet = objBySubAndProp.get(dim.asResource()).get(QB_codeList);
-                codeListSet.retainAll(codeListWithDefSet);
-                Property dimAsProp = ResourceFactory.createProperty(dim.asResource().getURI());
-                if (!codeListSet.isEmpty()) codeListByDim.put(dimAsProp, codeListSet);
-            }
-            valNotInCodeListByDirPcp.putAll(
-                    obsSetPcpCheck("DIRECT", obsSet, codeListByDim, pcpByCodeList));
-            valNotInCodeListByInvPcp.putAll(
-                    obsSetPcpCheck("INVERSE", obsSet, codeListByDim, pcpByCodeList));
-        }
-        valNotInCodeListByPcp.add(valNotInCodeListByDirPcp);
-        valNotInCodeListByPcp.add(valNotInCodeListByInvPcp);
+                validatorIC20_21.validate();
         String logMsg20 = " is not connected to the following code lists along a direct path: ";
         String logMsg21 = " is not connected to the following code lists along an inverse path: ";
-        logValidationResult(icName20, valNotInCodeListByDirPcp, logMsg20);
-        logValidationResult(icName21, valNotInCodeListByInvPcp, logMsg21);
+        logValidationResult(icName20, valNotInCodeListByPcp.get(0), logMsg20);
+        logValidationResult(icName21, valNotInCodeListByPcp.get(1), logMsg21);
         return valNotInCodeListByPcp;
-    }
-
-    /**
-     * This function is a subtask of function checkIC20_21 for checking if the
-     * dimension values of a set of observations are connected to their
-     * corresponding code list through a path of parent child properties
-     * @param direction indicates a direct or inverse link path
-     * @param obsSet a set of observations
-     * @param codeListByDim a map of dimensions with corresponding code lists
-     * @param pcpByCodeList a map of code lists with corresponding parent child
-     *                      properties
-     * @return a map of values with a set of code lists not including
-     * corresponding values
-     */
-    public Map<RDFNode, Set<RDFNode>> obsSetPcpCheck (String direction,
-                      Set<Resource> obsSet, Map<Property, Set<RDFNode>> codeListByDim,
-                      Map<Resource, Map<String, Set<Property>>> pcpByCodeList) {
-        Map<RDFNode, Set<RDFNode>> valNotInCodeList = new HashMap<RDFNode, Set<RDFNode>>();
-        for (Resource obs : obsSet) {
-            Map<RDFNode, Set<RDFNode>> codeListByVal =
-                    valNotInCodeListCheck(direction, obs, codeListByDim, pcpByCodeList);
-            for (RDFNode val : codeListByVal.keySet()) {
-                Set<RDFNode> codeListForOneObs = codeListByVal.get(val);
-                if (valNotInCodeList.containsKey(val)) {
-                    Set<RDFNode> codeListForObsSet = valNotInCodeList.get(val);
-                    codeListForObsSet.addAll(codeListForOneObs);
-                }
-                else valNotInCodeList.put(val, codeListForOneObs);
-            }
-        }
-        return valNotInCodeList;
-    }
-
-    /**
-     * This function is a subtask of function checkIC20_21 for checking if the
-     * dimension values of an observation are connected to code lists through a
-     * path of parent child properties
-     * @param direction indicates a direct or inverse link path
-     * @param obs an observation
-     * @param codeListByDim a map of dimensions with corresponding code lists
-     * @param pcpByCodeList a map of code lists with corresponding parent child
-     *                      properties
-     * @return a map of values with a set of code lists not including
-     * corresponding values
-     */
-    public Map<RDFNode, Set<RDFNode>> valNotInCodeListCheck(String direction, Resource obs,
-            Map<Property, Set<RDFNode>> codeListByDim,
-            Map<Resource, Map<String, Set<Property>>> pcpByCodeList) {
-        Map<RDFNode, Set<RDFNode>> valNotInCodeList = new HashMap<RDFNode, Set<RDFNode>>();
-        for (Property dim : codeListByDim.keySet()) {
-            Set<RDFNode> codeListSet = codeListByDim.get(dim);
-            Set<RDFNode> valueSet = model.listObjectsOfProperty(obs, dim).toSet();
-            if (valueSet.size() != 1) continue;
-            RDFNode value = valueSet.iterator().next();
-            boolean isConnected = false;
-            for (RDFNode codeList : codeListSet) {
-                Resource codeListAsRes = codeList.asResource();
-                Set<Property> pcpSet = pcpByCodeList.get(codeListAsRes).get(direction);
-                isConnected = connectedByPcp(direction, codeListAsRes, pcpSet, value);
-                if (isConnected) break;
-            }
-            if (!isConnected) valNotInCodeList.put(value, codeListSet);
-        }
-        return valNotInCodeList;
-    }
-
-    /**
-     * This function is a subtask of function checkIC20_21 for checking if a
-     * code list is connected to a value through one of parent child
-     * properties in the given set
-     * @param direction indicates a direct or inverse link path
-     * @param codeList a code list
-     * @param pcpSet a set of candidate parent child properties connecting the
-     *               code list to the value
-     * @param value the dimension value of an observation
-     * @return a boolean value indicating whether there is a connection or not
-     */
-    public boolean connectedByPcp (String direction, Resource codeList,
-                                   Set<Property> pcpSet, RDFNode value) {
-        boolean isConnected = false;
-        if (pcpSet.isEmpty()) {
-            isConnected = connectedByPropList(codeList, Arrays.asList(QB_hierarchyRoot), value);
-            return isConnected;
-        }
-        for (Property pcp : pcpSet) {
-            if (direction.equals("DIRECT"))
-                isConnected = connectedByRepeatedProp(codeList, Arrays.asList(QB_hierarchyRoot),
-                        pcp, value, true);
-            else
-                isConnected = connectedByRepeatedProp(codeList, Arrays.asList(QB_hierarchyRoot),
-                        pcp, value, false);
-            if (isConnected) break;
-        }
-        return isConnected;
-    }
-
-    /**
-     * This function is a subtask of function checkIC20_21 for getting sets of
-     * candidate parent child properties for the corresponding code lists
-     * @return a map of code lists with corresponding parent child properties
-     */
-    public Map<Resource, Map<String, Set<Property>>> getPcpByCodeList () {
-        Map<Resource, Map<String, Set<Property>>> pcpByCodeList =
-                new HashMap<Resource, Map<String, Set<Property>>>();
-        Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
-        objByProp.put(RDF_type, QB_HierarchicalCodeList);
-        Map<Resource, Map<Property, Set<RDFNode>>> objBySubAndProp =
-                searchByMultipleProperty(null, objByProp, Arrays.asList(QB_parentChildProperty));
-        for (Resource codeList : objBySubAndProp.keySet()) {
-            Map<String, Set<Property>> pcpByDirect = new HashMap<String, Set<Property>>();
-            Set<Property> dirPcpSet = new HashSet<Property>();
-            Set<Property> invPcpSet = new HashSet<Property>();
-            Set<RDFNode> pcpNodeSet =
-                    objBySubAndProp.get(codeList).get(QB_parentChildProperty);
-            for (RDFNode pcp : pcpNodeSet) {
-                if (pcp.isURIResource())
-                    dirPcpSet.add(ResourceFactory.createProperty(pcp.asResource().getURI()));
-                else if (pcp.isAnon()) {
-                    NodeIterator invPcpIter =
-                            model.listObjectsOfProperty(pcp.asResource(), OWL_inverseOf);
-                    invPcpSet.addAll(nodeToProperty(invPcpIter.toSet()));
-                }
-            }
-            pcpByDirect.put("DIRECT", dirPcpSet);
-            pcpByDirect.put("INVERSE", invPcpSet);
-            pcpByCodeList.put(codeList, pcpByDirect);
-        }
-        return pcpByCodeList;
     }
 
     /**
