@@ -16,6 +16,11 @@ public class ValidatorIC1 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-1 Unique DataSet: Every qb:Observation has exactly one
+     * associated qb:DataSet.
+     * @return a map of observations with multiple datasets
+     */
     public Map<Resource, Set<RDFNode>> validate() {
         Map<Resource, Set<RDFNode>> datasetByObs =
                 new HashMap<Resource, Set<RDFNode>>();

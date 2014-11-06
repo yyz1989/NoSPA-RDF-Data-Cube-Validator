@@ -12,6 +12,12 @@ public class ValidatorIC14 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-14 All measures present: In a qb:DataSet which does not use
+     * a Measure dimension then each individual qb:Observation must have a
+     * value for every declared measure.
+     * @return a map of observations with a set of measures missing values.
+     */
     public Map<Resource, Set<RDFNode>> validate() {
         Map<Resource, Set<RDFNode>> obsWithoutMeasureVal =
                 new HashMap<Resource, Set<RDFNode>>();
@@ -32,8 +38,8 @@ public class ValidatorIC14 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of checkIC14 for checking the values of a set
-     * of measures for a set of observations.
+     * This function is a subtask to check the values of a set of measures
+     * for a set of observations.
      * @param obsSet a set of observations
      * @param measureSet a set of measures
      * @return a map of observations with a set of measures missing values

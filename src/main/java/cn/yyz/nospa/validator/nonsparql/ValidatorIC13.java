@@ -12,6 +12,11 @@ public class ValidatorIC13 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-13 Required attributes: Every qb:Observation has a value for
+     * each declared attribute that is marked as required.
+     * @return a map of observations with attribute properties missing values
+     */
     public Map<Resource, Set<RDFNode>> validate() {
         Map<Resource, Set<RDFNode>> obsWithoutAttribVal =
                 new HashMap<Resource, Set<RDFNode>>();
@@ -37,7 +42,7 @@ public class ValidatorIC13 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask for checking the values of a set of attribute
+     * This function is a subtask to check the values of a set of attribute
      * properties for a set of observations.
      * @param obsSet a set of observations
      * @param attribSet a set of attribute properties

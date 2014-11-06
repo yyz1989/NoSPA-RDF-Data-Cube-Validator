@@ -12,6 +12,16 @@ public class ValidatorIC15_16 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-15 Measure dimension consistent: In a qb:DataSet which uses
+     * a Measure dimension then each qb:Observation must have a value for the
+     * measure corresponding to its given qb:measureType.
+     * Validate IC-16 Single measure on measure dimension observation: In a
+     * qb:DataSet which uses a Measure dimension then each qb:Observation must
+     * only have a value for one measure (by IC-15 this will be the measure
+     * corresponding to its qb:measureType).
+     * @return a map of faulty observations with measures missing values
+     */
     public Map<Resource, Set<RDFNode>> validate() {
         Map<Resource, Set<RDFNode>> obsWithFaultyMeasure = new HashMap<Resource, Set<RDFNode>>();
         List<Property> propPath = Arrays.asList(QB_structure, QB_component,
@@ -32,8 +42,8 @@ public class ValidatorIC15_16 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of function checkIC15_16 for checking values
-     * of a set of measures for a set of observations.
+     * This function is a subtask to check values of a set of measures for
+     * a set of observations.
      * @param obsSet a set of observations
      * @param measureSet a set of measures
      * @return a map of faulty observations with measures missing values

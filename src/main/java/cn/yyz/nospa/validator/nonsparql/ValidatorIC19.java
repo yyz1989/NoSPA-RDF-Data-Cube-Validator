@@ -12,6 +12,13 @@ public class ValidatorIC19 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-19 Codes from code list: If a dimension property has a
+     * qb:codeList, then the value of the dimension property on every
+     * qb:Observation must be in the code list.
+     * @return a map of values with a set of code lists not including the
+     * values
+     */
     public Map<RDFNode, Set<RDFNode>> validate() {
         Map<RDFNode, Set<RDFNode>> valNotInCodeList = new HashMap<RDFNode, Set<RDFNode>>();
         Map<RDFNode, Set<? extends RDFNode>> conceptCLByDim =
@@ -47,8 +54,8 @@ public class ValidatorIC19 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of function checkIC19 to check if the
-     * dimension values of a set of observations match the given code lists
+     * This function is a subtask to check if the dimension values of a set
+     * of observations match the given code lists
      * @param obsSet a set of observations
      * @param conceptCLByDim a map of dimensions with corresponding code lists
      *                       of the ConceptScheme type
@@ -89,8 +96,8 @@ public class ValidatorIC19 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of function checkIC19 to check if the
-     * dimension values of an observation matches one of the given code lists
+     * This function is a subtask to check if the dimension values of an
+     * observation matches one of the given code lists
      * @param isConceptList indicates the type of code list, true for Concept
      *                      Scheme and false for Collection.
      * @param obs an observation
@@ -126,8 +133,8 @@ public class ValidatorIC19 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of function checkIC19 to check if the given
-     * value is included in a code list.
+     * This function is a subtask to check if the given value is included in a
+     * code list.
      * @param isConceptList indicates the type of code list, true for Concept
      *                      Scheme and false for Collection.
      * @param value value of a dimension property

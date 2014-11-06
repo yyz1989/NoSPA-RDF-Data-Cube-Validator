@@ -14,6 +14,11 @@ public class ValidatorIC4 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-4 Dimensions have range: Every dimension declared in a
+     * qb:DataStructureDefinition must have a declared rdfs:range.
+     * @return a set of dimensions without a declared rdfs:range
+     */
     public Set<Resource> validate() {
         Set<Resource> dimSet = model.listSubjectsWithProperty(RDF_type,
                 QB_DimensionProperty).toSet();

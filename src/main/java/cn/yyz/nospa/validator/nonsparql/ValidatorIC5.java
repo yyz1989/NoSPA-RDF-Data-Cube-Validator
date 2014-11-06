@@ -15,6 +15,11 @@ public class ValidatorIC5 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-5 Concept dimensions have code lists: Every dimension with
+     * range skos:Concept must have a qb:codeList.
+     * @return a set of concept dimensions without code lists
+     */
     public Set<Resource> validate() {
         Set<Resource> dimWithoutCodeList = new HashSet<Resource>();
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();

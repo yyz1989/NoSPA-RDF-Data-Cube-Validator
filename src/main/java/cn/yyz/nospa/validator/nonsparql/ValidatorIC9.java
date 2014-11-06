@@ -15,6 +15,11 @@ public class ValidatorIC9 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-9 Unique slice structure: Each qb:Slice must have exactly
+     * one associated qb:sliceStructure.
+     * @return a map of slices with multiple slice structures
+     */
     public Map<Resource, Set<RDFNode>> validate() {
         Map<Resource, Set<RDFNode>> structBySlice =
                 new HashMap<Resource, Set<RDFNode>>();

@@ -5,14 +5,21 @@ import com.hp.hpl.jena.rdf.model.*;
 import java.util.*;
 
 /**
+ * A base class with commonly used utility functions and static variables for
+ * all validators.
  * Created by yyz on 11/4/14.
  */
 public class ValidatorBase {
     protected Model model;
-    
+
+    /**
+     * The constructor of a validator base
+     * @param model the constructor takes an RDF model as parameter
+     */
     public ValidatorBase(Model model) {
         this.model = model;
-    }    
+    }
+
     /**
      * Searches resources and their corresponding values connected by a
      * property path (e.g.,

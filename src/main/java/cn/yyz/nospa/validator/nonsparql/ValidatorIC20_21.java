@@ -12,6 +12,21 @@ public class ValidatorIC20_21 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-20 Codes from hierarchy: If a dimension property has a
+     * qb:HierarchicalCodeList with a non-blank qb:parentChildProperty then
+     * the value of that dimension property on every qb:Observation must be
+     * reachable from a root of the hierarchy using zero or more hops along
+     * the qb:parentChildProperty links.
+     * Validate IC-21 Codes from hierarchy (inverse): If a dimension property
+     * has a qb:HierarchicalCodeList with an inverse qb:parentChildProperty
+     * then the value of that dimension property on every qb:Observation must
+     * be reachable from a root of the hierarchy using zero or more hops along
+     * the inverse qb:parentChildProperty links.
+     * @return a list of two maps containing values with code lists not
+     * including corresponding values with any parent child property along both
+     * direct and inverse paths
+     */
     public List<Map<RDFNode, Set<RDFNode>>> validate() {
         Map<RDFNode, Set<RDFNode>> valNotInCodeListByDirPcp =
                 new HashMap<RDFNode, Set<RDFNode>>();
@@ -50,9 +65,9 @@ public class ValidatorIC20_21 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of function checkIC20_21 for checking if the
-     * dimension values of a set of observations are connected to their
-     * corresponding code list through a path of parent child properties
+     * This function is a subtask to check if the dimension values of a set of
+     * observations are connected to their corresponding code list through a
+     * path of parent child properties
      * @param direction indicates a direct or inverse link path
      * @param obsSet a set of observations
      * @param codeListByDim a map of dimensions with corresponding code lists
@@ -81,9 +96,9 @@ public class ValidatorIC20_21 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of function checkIC20_21 for checking if the
-     * dimension values of an observation are connected to code lists through a
-     * path of parent child properties
+     * This function is a subtask to check if the dimension values of an
+     * observation are connected to code lists through a path of parent child
+     * properties
      * @param direction indicates a direct or inverse link path
      * @param obs an observation
      * @param codeListByDim a map of dimensions with corresponding code lists
@@ -114,9 +129,8 @@ public class ValidatorIC20_21 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of function checkIC20_21 for checking if a
-     * code list is connected to a value through one of parent child
-     * properties in the given set
+     * This function is a subtask to check if a code list is connected to a
+     * value through one of parent child properties in the given set
      * @param direction indicates a direct or inverse link path
      * @param codeList a code list
      * @param pcpSet a set of candidate parent child properties connecting the
@@ -144,8 +158,8 @@ public class ValidatorIC20_21 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of function checkIC20_21 for getting sets of
-     * candidate parent child properties for the corresponding code lists
+     * This function is a subtask to get sets of candidate parent child
+     * properties for the corresponding code lists
      * @return a map of code lists with corresponding parent child properties
      */
     public Map<Resource, Map<String, Set<Property>>> getPcpByCodeList () {

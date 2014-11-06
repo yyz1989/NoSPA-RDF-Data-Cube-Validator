@@ -15,6 +15,13 @@ public class ValidatorIC18 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-18 Consistent dataset links: If a qb:DataSet D has a
+     * qb:slice S, and S has an qb:observation O, then the qb:dataSet
+     * corresponding to O must be D.
+     * @return a map of observations with correct datasets that should be
+     * associated to.
+     */
     public Map<Resource, Resource> validate() {
         Map<Resource, Resource> obsNotInDataset = new HashMap<Resource, Resource>();
         Property[] properties = {QB_slice, QB_observation};

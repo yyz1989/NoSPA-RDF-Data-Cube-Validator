@@ -15,6 +15,12 @@ public class ValidatorIC8 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-8 Slice Keys consistent with DSD: Every qb:componentProperty
+     * on a qb:SliceKey must also be declared as a qb:component of the
+     * associated qb:DataStructureDefinition.
+     * @return a set of component properties not associated with DSDs
+     */
     public Set<RDFNode> validate() {
         Set<RDFNode> compWithoutDSD = new HashSet<RDFNode>();
         List<Property> propPath = Arrays.asList(QB_component, QB_componentProperty);

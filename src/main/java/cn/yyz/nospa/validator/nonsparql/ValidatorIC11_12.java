@@ -12,6 +12,14 @@ public class ValidatorIC11_12 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-11 All dimensions required: Every qb:Observation has a value
+     * for each dimension declared in its associated qb:DataStructureDefinition.
+     * Validate IC-12 No duplicate observations: No two qb:Observations in the
+     * same qb:DataSet may have the same value for all dimensions.
+     * @return a map of observations with dimensions without values or with
+     * duplicate values.
+     */
     public Map<Resource, Set<RDFNode>> validate() {
         Map<Resource, Set<RDFNode>> faultyObs = new HashMap<Resource, Set<RDFNode>>();
         Set<Resource> duplicateObsSet = new HashSet<Resource>();
@@ -39,8 +47,8 @@ public class ValidatorIC11_12 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of function checkIC11_12 for checking the
-     * values of a set of observations for a set of dimensions.
+     * This function is a subtask to check the values of a set of
+     * observations for a set of dimensions.
      * @param obsSet a set of observations
      * @param dimSet a set of dimension properties
      * @return a map of faulty observations with dimension property set missing

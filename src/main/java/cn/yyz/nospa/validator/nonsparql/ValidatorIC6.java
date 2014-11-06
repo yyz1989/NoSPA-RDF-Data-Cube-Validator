@@ -12,6 +12,12 @@ public class ValidatorIC6 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-6 Only attributes may be optional: The only components of a
+     * qb:DataStructureDefinition that may be marked as optional, using
+     * qb:componentRequired are attributes.
+     * @return a set of component properties not declared as attributes
+     */
     public Set<RDFNode> validate() {
         Set<RDFNode> compPropSet = new HashSet<RDFNode>();
         Map<Property, RDFNode> objyByProp = new HashMap<Property, RDFNode>();

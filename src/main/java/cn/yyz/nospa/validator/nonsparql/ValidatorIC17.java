@@ -12,6 +12,15 @@ public class ValidatorIC17 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-17 All measures present in measures dimension cube: In a
+     * qb:DataSet which uses a Measure dimension then if there is a Observation
+     * for some combination of non-measure dimensions then there must be other
+     * Observations with the same non-measure dimension values for each of the
+     * declared measures.
+     * @return a map of observations with amount of other observations with
+     * same dimension values.
+     */
     public Map<Resource, Integer> validate() {
         Map<Resource, Integer> numObs2ByObs1 = new HashMap<Resource, Integer>();
         List<Property> propPath = Arrays.asList(QB_structure,
@@ -51,8 +60,8 @@ public class ValidatorIC17 extends ValidatorBase {
     }
 
     /**
-     * This function is a subtask of checkIC17 for checking observations with
-     * same dimension property structure as each observation given in the set
+     * This function is a subtask to check observations with same dimension
+     * property structure as each observation given in the set
      * @param obsSet a set of observations
      * @param dimPropSet a set of dimension properties
      * @return a map of observations with a set of corresponding observations

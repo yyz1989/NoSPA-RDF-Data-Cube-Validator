@@ -8,7 +8,7 @@ import java.io.*;
 import java.util.*;
 
 /**
- * An RDF Data Cube Validator
+ * The class for the entry point of a validator
  * Created by Yang Yuanzhe on 9/26/14.
  */
 public class Validator {
@@ -16,7 +16,15 @@ public class Validator {
     private Model model;
 
     /**
-     * Constructor of a validator
+     * Constructor of a validator for an RDF model
+     * @param model a Jena RDF model
+     */
+    public Validator(Model model) {
+        this.model = model;
+    }
+
+    /**
+     * Constructor of a validator for a file
      * @param filename complete path of the cube file to be validated
      * @param format RDF serialization format of the cube file
      */
@@ -54,8 +62,11 @@ public class Validator {
         } catch (IOException ioe) {
             logger.error("The provided file path is not writable");
         }
-    }    
+    }
 
+    /**
+     * Normalize an abbreviated Data Cube.
+     */
     public void normalize() {
         Normalizer normalizer = new Normalizer(model);
         logger.info("Normalizing cube at phase 1 ...");
@@ -65,7 +76,7 @@ public class Validator {
     }
 
     /**
-     * A shortcut function to excute all constraint validations.
+     * A shortcut function to execute all constraint validations.
      */
     public void validateAll() {
         logger.info("Validating all constraints ...");

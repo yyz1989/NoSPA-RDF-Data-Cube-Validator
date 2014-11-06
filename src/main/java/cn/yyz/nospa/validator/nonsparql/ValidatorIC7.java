@@ -15,6 +15,11 @@ public class ValidatorIC7 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-7 Slice Keys must be declared: Every qb:SliceKey must be
+     * associated with a qb:DataStructureDefinition.
+     * @return a set of Slice Keys not associated with DSDs
+     */
     public Set<Resource> validate() {
         Map<Property, RDFNode> objByProp = new HashMap<Property, RDFNode>();
         objByProp.put(RDF_type, QB_DataStructureDefinition);

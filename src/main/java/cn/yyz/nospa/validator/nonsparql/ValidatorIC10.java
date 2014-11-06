@@ -12,6 +12,11 @@ public class ValidatorIC10 extends ValidatorBase {
         super(model);
     }
 
+    /**
+     * Validate IC-10 Slice dimensions complete: Every qb:Slice must have a
+     * value for every dimension declared in its qb:sliceStructure.
+     * @return a map of slices with a set of dimensions without values
+     */
     public Map<Resource, Set<RDFNode>> validate() {
         Map<Resource, Set<RDFNode>> dimBySliceWithoutVal = new HashMap<Resource, Set<RDFNode>>();
         List<Property> propPath = Arrays.asList(QB_sliceStructure, QB_componentProperty);
