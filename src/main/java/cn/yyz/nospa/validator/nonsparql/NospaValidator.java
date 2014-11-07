@@ -1,5 +1,6 @@
 package cn.yyz.nospa.validator.nonsparql;
 
+import cn.yyz.nospa.validator.Validator;
 import com.hp.hpl.jena.rdf.model.*;
 import com.hp.hpl.jena.util.FileManager;
 import org.slf4j.Logger;
@@ -11,15 +12,15 @@ import java.util.*;
  * The class for the entry point of a validator
  * Created by Yang Yuanzhe on 9/26/14.
  */
-public class Validator {
-    private Logger logger = LoggerFactory.getLogger(Validator.class);
+public class NospaValidator implements Validator{
+    private Logger logger = LoggerFactory.getLogger(NospaValidator.class);
     private Model model;
 
     /**
      * Constructor of a validator for an RDF model
      * @param model a Jena RDF model
      */
-    public Validator(Model model) {
+    public NospaValidator(Model model) {
         this.model = model;
     }
 
@@ -28,7 +29,7 @@ public class Validator {
      * @param filename complete path of the cube file to be validated
      * @param format RDF serialization format of the cube file
      */
-    public Validator(String filename, String format) {
+    public NospaValidator(String filename, String format) {
         logger.debug("RDF Cube Validation Result");
         logger.debug("==========================");
         logger.debug("");

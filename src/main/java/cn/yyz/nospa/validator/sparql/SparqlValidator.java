@@ -1,5 +1,6 @@
 package cn.yyz.nospa.validator.sparql;
 
+import cn.yyz.nospa.validator.Validator;
 import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -18,7 +19,7 @@ import java.util.Set;
  * The class for the entry point of a SPARQL based validator
  * Created by yyz on 11/4/14.
  */
-public class SparqlValidator {
+public class SparqlValidator implements Validator {
     private Model model;
     private Logger logger = LoggerFactory.getLogger(SparqlValidator.class);
 
