@@ -43,6 +43,7 @@ Basically, there are 3 ways to use it:
     The first argument for the createValidaotr method is the type of validator. Options are "NOSPA" and "SPARQL" since they are implemented in this software. The ``inputPath`` is the path of the cube file and ``inputFormat`` indicates the RDF format of the cube file such as RDF/XML, RDF/XML-ABBREV, TURTLE, N-TRIPLES, etc. 
 
     You may also want to check constraints selectively, in that case you cannot use the ValidatorFactory because the two types of validator have different implementions to validate constraints individually and it is a bit difficulty to unify them with an interface. For example, validate with NoSPA validator:
+    
     ``NospaValidator nospaValidator = new NospaValidator(inputPath, inputFormat);``
     
     ``nospaValidator.normalize();``
