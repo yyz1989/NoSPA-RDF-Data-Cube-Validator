@@ -58,9 +58,9 @@ Basically, there are 3 ways to use it:
     
     ``sparqlValidator.normalize();``
     
-    ``noSpaValidator.validate("IC1");``
+    ``sparqlValidator.validate("IC1");``
     
-    ``noSpaValidator.validateIC20_21("IC20");``
+    ``sparqlValidator.validateIC20_21("IC20");``
     
     You will know why there is such difference if you can take a look at the code. Maybe I will get better ideas to unify them in the future. Besides, please make sure that you have normalized the cube before checking constraints if it is in the abbreviated form. You don't need to normalize it if you are sure that it is in the normalized form.
 
