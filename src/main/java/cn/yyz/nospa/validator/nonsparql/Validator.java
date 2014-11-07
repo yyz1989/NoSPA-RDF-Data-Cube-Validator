@@ -32,6 +32,7 @@ public class Validator {
         logger.debug("RDF Cube Validation Result");
         logger.debug("==========================");
         logger.debug("");
+        logger.debug("Validator: NoSPA");
         logger.debug(new Date().toString());
         logger.debug(filename);
         logger.debug("");

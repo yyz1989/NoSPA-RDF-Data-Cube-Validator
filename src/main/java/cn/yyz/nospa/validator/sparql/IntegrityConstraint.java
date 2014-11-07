@@ -262,7 +262,7 @@ public enum IntegrityConstraint {
                     "}}"
     ),
 
-    IC20_1(
+    IC20A(
                     "SELECT ?p WHERE {\n" +
                     "    ?hierarchy a qb:HierarchicalCodeList ;\n" +
                     "                 qb:parentChildProperty ?p .\n" +
@@ -270,8 +270,8 @@ public enum IntegrityConstraint {
                     "}"
     ),
 
-    IC20_2(
-                    "SELECT ?list ?v " +
+    IC20B(
+                    "SELECT ?v ?list " +
                     "WHERE {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +
@@ -282,7 +282,7 @@ public enum IntegrityConstraint {
                     "}"
     ),
 
-    IC21_1(
+    IC21A(
                     "SELECT ?p WHERE {\n" +
                     "    ?hierarchy a qb:HierarchicalCodeList;\n" +
                     "                 qb:parentChildProperty ?pcp .\n" +
@@ -292,8 +292,8 @@ public enum IntegrityConstraint {
                     "}"
     ),
 
-    IC21_2(
-                    "SELECT ?list ?v " +
+    IC21B(
+                    "SELECT ?v ?list " +
                     "WHERE {\n" +
                     "    ?obs qb:dataSet/qb:structure/qb:component/qb:componentProperty ?dim .\n" +
                     "    ?dim a qb:DimensionProperty ;\n" +

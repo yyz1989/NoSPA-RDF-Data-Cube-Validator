@@ -1,6 +1,7 @@
 package cn.yyz.nospa.validator;
 
 import cn.yyz.nospa.validator.nonsparql.Validator;
+import cn.yyz.nospa.validator.sparql.SparqlValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.IOException;
