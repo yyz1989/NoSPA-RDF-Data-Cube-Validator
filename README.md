@@ -34,15 +34,34 @@ Basically, there are 3 ways to use it:
 
 2.  In the case that you need to integrate it into your own project, you have to import the package ``rdf-data-cube-validator-0.9.jar``, create a new validator instance and call the functions to normalize and validate the cube. 
 
-    ``Validator validator = new Validator(inputPath, inputFormat);``
+    ``Validator validator = ValidatorFactory.createValidator("NOSPA", inputPath, inputFormat);``
     
     ``validator.normalize();``
     
     ``validator.validateAll();``
 
-    The ``inputPath`` is the path of the cube file and ``inputFormat`` indicates the RDF format of the cube file such as RDF/XML, RDF/XML-ABBREV, TURTLE, N-TRIPLES, etc. 
+    The first argument for the createValidaotr method is the type of validator. Options are "NOSPA" and "SPARQL" since they are implemented in this software. The ``inputPath`` is the path of the cube file and ``inputFormat`` indicates the RDF format of the cube file such as RDF/XML, RDF/XML-ABBREV, TURTLE, N-TRIPLES, etc. 
 
-    You may also want to check constraints selectively, in that case you have to explore the public functions of the Validator class by yourself. But please make sure that you have normalized the cube before checking constraints if it is in the abbreviated form. You don't need to normalize it if you are sure that it is in the normalized form.
+    You may also want to check constraints selectively, in that case you cannot use the ValidatorFactory because the two types of validator have different implementions to validate constraints individually and it is a bit difficulty to unify them with an interface. For example, validate with NoSPA validator:
+    ``NospaValidator nospaValidator = new NospaValidator(inputPath, inputFormat);``
+    
+    ``nospaValidator.normalize();``
+    
+    ``nospaValidator.validateIC1();``
+    
+    ``nospaValidator.validateIC20_21();``
+    
+    Validate with SPARQL validator:
+    
+    ``SparqlValidator sparqlValidator = new SparqlValidator(inputPath, inputFormat);``
+    
+    ``sparqlValidator.normalize();``
+    
+    ``noSpaValidator.validate("IC1");``
+    
+    ``noSpaValidator.validateIC20_21("IC20");``
+    
+    You will know why there is such difference if you can take a look at the code. Maybe I will get better ideas to unify them in the future. Besides, please make sure that you have normalized the cube before checking constraints if it is in the abbreviated form. You don't need to normalize it if you are sure that it is in the normalized form.
 
     Note that the validation result of this tool will be recorded as logs so you need to turn on the logs for this package in the log configuration of your own project. Additionally you have to set a system property ``current.timestamp`` with the value of current time as part of the name of the validation result. Finally, the validation result can be found at ``${user.dir}/validation_result_${current.timestamp}.md``.
 
