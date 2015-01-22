@@ -22,6 +22,8 @@ JVM (>=5) if you want to execute a jar directly
 
 This tool is written in Java and managed by Maven so you can compile it easily by yourself. The first thing you need to do is ``git clone`` this repository.
 
+*Updates: now the packaged jar files are already in the target folder so you don't need to do it by yourself any more*
+
 Then you need to do a ``mvn package`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9.jar``. Note that in this case the library for Jena and Log4j is not included in this package.
 
 In the case that you need to run this package independently, you will need to do a ``mvn package assembly:single`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9-jar-with-dependencies.jar``, which includes all the required libraries to run it.
