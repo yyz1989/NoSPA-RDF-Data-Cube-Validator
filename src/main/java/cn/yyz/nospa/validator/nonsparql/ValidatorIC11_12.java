@@ -1,6 +1,8 @@
 package cn.yyz.nospa.validator.nonsparql;
 
 import com.hp.hpl.jena.rdf.model.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -11,7 +13,7 @@ public class ValidatorIC11_12 extends ValidatorBase {
     public ValidatorIC11_12(Model model) {
         super(model);
     }
-
+    private Logger logger = LoggerFactory.getLogger(ValidatorIC11_12.class);
     /**
      * Validate IC-11 All dimensions required: Every qb:Observation has a value
      * for each dimension declared in its associated qb:DataStructureDefinition.
@@ -39,6 +41,7 @@ public class ValidatorIC11_12 extends ValidatorBase {
                     model.listSubjectsWithProperty(QB_dataSet, dataset).toSet());
         }
         for (Resource dataset : obsByDataset.keySet()) {
+            logger.info("    Validating dataset " + dataset.toString());
             Set<Resource> obsSet = obsByDataset.get(dataset);
             Set<? extends RDFNode> dimSet = dimByDataset.get(dataset);
             faultyObs.putAll(dimValueCheck(obsSet, dimSet));
@@ -60,7 +63,10 @@ public class ValidatorIC11_12 extends ValidatorBase {
         Map<Resource, Set<RDFNode>> faultyObs = new HashMap<Resource, Set<RDFNode>>();
         Map<Resource, Set<RDFNode>> valueSetByObs = new HashMap<Resource, Set<RDFNode>>();
         Set<Property> dimAsPropSet = nodeToProperty(dimSet);
+        int obsSize = obsSet.size();
+        int progress = 1;
         for (Resource obs : obsSet) {
+            System.out.print("    Validating observation "+ progress + " of " + obsSize + "\r");
             Set<RDFNode> valueSet = new HashSet<RDFNode>();
             Set<RDFNode> dimWithoutValSet = new HashSet<RDFNode>();
             for (Property dim : dimAsPropSet) {
@@ -74,6 +80,7 @@ public class ValidatorIC11_12 extends ValidatorBase {
                         dimWithoutValSet);
                 else valueSetByObs.put(obs, valueSet);
             }
+            progress++;
         }
         return faultyObs;
     }

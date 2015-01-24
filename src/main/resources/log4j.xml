@@ -11,7 +11,17 @@
         </filter>
     </appender>
 
-    <appender name="file" class="org.apache.log4j.FileAppender">
+    <appender name="log" class="org.apache.log4j.FileAppender">
+        <param name="file" value="${user.dir}/nospa_validator_log_${current.timestamp}.log"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="%d %p - %m%n" />
+        </layout>
+        <filter class="org.apache.log4j.varia.LevelRangeFilter">
+            <param name="levelMin" value="INFO" />
+        </filter>
+    </appender>
+
+    <appender name="result" class="org.apache.log4j.FileAppender">
         <param name="file" value="${user.dir}/validation_result_${current.timestamp}.md"/>
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="%m%n" />
@@ -25,7 +35,8 @@
     <logger name="cn.yyz.nospa.validator" additivity="false">
         <level value="debug"/>
         <appender-ref ref="std" />
-        <appender-ref ref="file" />
+        <appender-ref ref="log" />
+        <appender-ref ref="result" />
     </logger>
 
     <root>
