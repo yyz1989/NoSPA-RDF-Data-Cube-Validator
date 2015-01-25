@@ -62,7 +62,7 @@ public class ValidatorIC11_12 extends ValidatorBase {
                                                        Set<? extends RDFNode> dimSet) {
         int obsSize = obsSet.size();
         Map<Resource, Set<RDFNode>> faultyObs = new HashMap<Resource, Set<RDFNode>>();
-        Map<Resource, Set<RDFNode>> valueSetByObs = new HashMap<Resource, Set<RDFNode>>(obsSize);
+        Set<Set<RDFNode>> obsValueSet = new HashSet<Set<RDFNode>>((int) (obsSize/0.75+1));
         Set<Property> dimAsPropSet = nodeToProperty(dimSet);
         int progress = 1;
         for (Resource obs : obsSet) {
@@ -76,9 +76,8 @@ public class ValidatorIC11_12 extends ValidatorBase {
             }
             if (!dimWithoutValSet.isEmpty()) faultyObs.put(obs, dimWithoutValSet);
             else {
-                if (valueSetByObs.containsValue(valueSet)) faultyObs.put(obs,
-                        dimWithoutValSet);
-                else valueSetByObs.put(obs, valueSet);
+                if (!obsValueSet.add(valueSet))
+                    faultyObs.put(obs, dimWithoutValSet);
             }
             progress++;
         }
