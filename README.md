@@ -3,12 +3,18 @@ NoSPA RDF Data Cube Validator
 
 ### Introduction
 
-This is an RDF Data Cube Validator. Its significant difference from other existing validators is that it is not based on SPARQL queries, hence its name "NoSPA". Jena library is used to manipulate RDF models. The official SPARQL queries for constraint checks are interpreted and parsed by this validator to search functions with nested statement listing functions provided by Jena and filters for different conditions. It has an outstanding performance because the entire process is executed in memory. I believe that it is valuable to sacrifice some memory for saving time.
+This is an RDF Data Cube Validator. Its significant difference from other existing validators is that it is not based on SPARQL queries, as its name "NoSPA". Jena library is used to manipulate RDF models. The official SPARQL queries for constraint checks are interpreted and parsed by this validator to search functions with nested statement listing functions provided by Jena and filters for different conditions. It has an outstanding performance because the entire process is executed in memory. I believe that it is valuable to sacrifice some memory for saving time.
 
 Here are some references and knowledge background for this tool:
   * The official RDF data cube spec: [The RDF Data Cube Vocabulary](http://www.w3.org/TR/vocab-data-cube/)
   * Jena API: [Apache Jena](http://jena.apache.org/index.html)
   * The official SPARQL spec: [SPARQL 1.1 Query Language](http://www.w3.org/TR/sparql11-query/)
+
+### Updates in the latest release 0.9.9
+
+1.  Rewrote some functions to boost the performance on validating constraints 11 and 12, which occupies more than 99% computation time among all constraints. Now NoSPA is capable of handling data cube with million level observations.
+
+2.  Added a progress monitor for the validation of 11 and 12.
 
 ### Requirements
 
@@ -24,17 +30,17 @@ This tool is written in Java and managed by Maven so you can compile it easily b
 
 *Updates: now the packaged jar files are already in the target folder so you don't need to do it by yourself any more*
 
-Then you need to do a ``mvn package`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9.jar``. Note that in this case the library for Jena and Log4j is not included in this package.
+Then you need to do a ``mvn package`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9.9.jar``. Note that in this case the library for Jena and Log4j is not included in this package.
 
-In the case that you need to run this package independently, you will need to do a ``mvn package assembly:single`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9-jar-with-dependencies.jar``, which includes all the required libraries to run it.
+In the case that you need to run this package independently, you will need to do a ``mvn package assembly:single`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9.9-jar-with-dependencies.jar``, which includes all the required libraries to run it.
 
 ### Validation
 
 Basically, there are 3 ways to use it:
 
-1.  Use an IDE to modify the code and property file by yourself and run the Main class, without making any packages.
+1.  Use an IDE to hack into the code by yourself and run the Main class, without making any packages.
 
-2.  In the case that you need to integrate it into your own project, you have to import the package ``rdf-data-cube-validator-0.9.jar``, create a new validator instance and call the functions to normalize and validate the cube. 
+2.  In the case that you need to integrate it into your own project, you have to import the package ``rdf-data-cube-validator-0.9.9.jar``, create a new validator instance and call the functions to normalize and validate the cube.
 
     ``Validator validator = ValidatorFactory.createValidator("NOSPA", inputPath, inputFormat);``
     
@@ -42,7 +48,7 @@ Basically, there are 3 ways to use it:
     
     ``validator.validateAll();``
 
-    The first argument for the createValidaotr method is the type of validator. Options are "NOSPA" and "SPARQL" since they are implemented in this software. The ``inputPath`` is the path of the cube file and ``inputFormat`` indicates the RDF format of the cube file such as RDF/XML, RDF/XML-ABBREV, TURTLE, N-TRIPLES, etc. 
+    The first argument for the createValidaotr method is the type of validator. Options are "NOSPA" and "SPARQL" since they are implemented in this software. The ``inputPath`` is the path of the cube file and ``inputFormat`` indicates the RDF format of the cube file such as RDF/XML, N3, TURTLE, N-TRIPLES, etc.
 
     You may also want to check constraints selectively, in that case you cannot use the ValidatorFactory because the two types of validator have different implementions to validate constraints individually and it is a bit difficulty to unify them with an interface. For example, validate with NoSPA validator:
     
@@ -80,7 +86,12 @@ Test environment: Ubuntu 14.04 with VMWare, 2 CPU cores of I5-2450M @ 2GHz, 2 GB
 Time consumption for validating IC-12:  
   * Validation by SPARQL queries with Virtuoso: 1 hour 22 min  
   * Validation by SPARQL queries with Jena Parser: 58 min  
-  * Validation by NoSPA: 29 sec  
+  * Validation by NoSPA: 10 sec
+
+*Updates for the performance of the latest release:*
+Test file: a 230MB cube file including 540K observations
+Test environment: A Web server with 4 Intel(R) Xeon(R) CPUs E5-2630L 0 @ 2.00GHz and 8 GB memory
+Time consumption: 230 sec
 
 ### Prospects
 

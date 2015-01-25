@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Properties;
 
 /**
@@ -19,41 +20,40 @@ public class Main {
     }
     public static void main(String[] args) {
         Logger logger = LoggerFactory.getLogger(Main.class);
-        String workPath = System.getProperty("user.dir");
-        String inputPath, inputFormat, outputPath, outputFormat;
+        HashMap<String, String> rdfFileExt = new HashMap<String, String>();
+        rdfFileExt.put("xml", "RDF/XML");
+        rdfFileExt.put("rdf", "RDF/XML");
+        rdfFileExt.put("nt", "N-TRIPLE");
+        rdfFileExt.put("ttl", "TURTLE");
+        rdfFileExt.put("n3", "N3");
+
+        String inputPath, inputFormat, validatorType;
+        System.out.println("===NoSPA RDF Data Cube Validator===");
         if (args.length != 2) {
-            Properties properties = new Properties();
-            InputStream inputStream;
-            try {
-                inputStream = Main.class.getClassLoader().getResourceAsStream("config.properties");
-                properties.load(inputStream);
-            } catch (IOException ioe) {
-                logger.error("Unable to load the property file");
-            }
-            inputPath = workPath + properties.getProperty("INPUT_PATH");
-            inputFormat = properties.getProperty("INPUT_FORMAT");
-            //outputPath = workPath + properties.getProperty("OUTPUT_PATH");
-            //outputFormat = properties.getProperty("OUTPUT_FORMAT");
+            System.out.println("Error: Missing arguments");
+            System.out.println("Usage: java -jar jar-name.jar <cube-file.(xml|rdf|nt|n3|ttl)> <(nospa|sparql)>");
+            return;
         }
         else {
             inputPath = args[0];
-            inputFormat = args[1];
-            //outputPath = args[2];
-            //outputFormat = args[3];
+            inputFormat = rdfFileExt.get(inputPath.substring(inputPath.lastIndexOf('.') + 1).toLowerCase());
+            if (inputFormat == null) {
+                System.out.println("Error: File path or filename is not valid");
+                return;
+            }
+            validatorType = args[1].toUpperCase();
+            if (!(validatorType.equals("NOSPA") || validatorType.equals("SPARQL"))) {
+                System.out.println("Error: Validator type is not supported");
+                return;
+            }
         }
 
-        Validator validator = ValidatorFactory.createValidator("NOSPA", inputPath, inputFormat);
+        long start = System.currentTimeMillis();
+        Validator validator = ValidatorFactory.createValidator(validatorType, inputPath, inputFormat);
         validator.normalize();
-
-        //long t1 = System.currentTimeMillis();
-        //validator.normalizeBySparql();
-        long t2 = System.currentTimeMillis();
         validator.validateAll();
-        long t3 = System.currentTimeMillis();
-
+        long end = System.currentTimeMillis();
         //validator.exportModel(outputPath, outputFormat);
-
-        //logger.info("The validation task completed in " + Long.toString(t2 - t1) + "ms");
-        logger.info("The validation task completed in " + Long.toString(t3 - t2) + "ms");
+        logger.info("The validation task completed in " + Long.toString(start - end) + "ms");
     }
 }
