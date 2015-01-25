@@ -60,10 +60,10 @@ public class ValidatorIC11_12 extends ValidatorBase {
      */
     private Map<Resource, Set<RDFNode>> dimValueCheck (Set<Resource> obsSet,
                                                        Set<? extends RDFNode> dimSet) {
-        Map<Resource, Set<RDFNode>> faultyObs = new HashMap<Resource, Set<RDFNode>>();
-        Map<Resource, Set<RDFNode>> valueSetByObs = new HashMap<Resource, Set<RDFNode>>();
-        Set<Property> dimAsPropSet = nodeToProperty(dimSet);
         int obsSize = obsSet.size();
+        Map<Resource, Set<RDFNode>> faultyObs = new HashMap<Resource, Set<RDFNode>>();
+        Map<Resource, Set<RDFNode>> valueSetByObs = new HashMap<Resource, Set<RDFNode>>(obsSize);
+        Set<Property> dimAsPropSet = nodeToProperty(dimSet);
         int progress = 1;
         for (Resource obs : obsSet) {
             System.out.print("    Validating observation "+ progress + " of " + obsSize + "\r");
