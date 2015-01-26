@@ -54,6 +54,6 @@ public class Main {
         validator.validateAll();
         long end = System.currentTimeMillis();
         //validator.exportModel(outputPath, outputFormat);
-        logger.info("The validation task completed in " + Long.toString(start - end) + "ms");
+        logger.info("The validation task completed in " + Long.toString(end - start) + "ms");
     }
 }

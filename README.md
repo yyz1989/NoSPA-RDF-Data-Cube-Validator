@@ -91,7 +91,7 @@ Time consumption for validating IC-12:
 *Updates for the performance of the latest release:*
 Test file: a 230MB cube file including 540K observations
 Test environment: A Web server with 4 Intel(R) Xeon(R) CPUs E5-2630L 0 @ 2.00GHz and 8 GB memory
-Time consumption: 230 sec
+Time consumption: 52 sec
 
 ### Prospects
 
