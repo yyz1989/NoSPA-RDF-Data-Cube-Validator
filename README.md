@@ -28,7 +28,7 @@ JVM (>=5) if you want to execute a jar directly
 
 This tool is written in Java and managed by Maven so you can compile it easily by yourself. The first thing you need to do is ``git clone`` this repository.
 
-*Updates: now the packaged jar files are already in the target folder so you don't need to do it by yourself any more*
+*Updates: now the packaged jar files are already uploaded and can be found at the release page so you don't need to do it by yourself any more*
 
 Then you need to do a ``mvn package`` at the root directory of this repository and find the jar file at ``NoSPA-RDF-Data-Cube-Validator/target/nospa-rdf-data-cube-validator-0.9.9.jar``. Note that in this case the library for Jena and Log4j is not included in this package.
 
@@ -74,7 +74,7 @@ Basically, there are 3 ways to use it:
 
     Note that the validation result of this tool will be recorded as logs so you need to turn on the logs for this package in the log configuration of your own project. Additionally you have to set a system property ``current.timestamp`` with the value of current time as part of the name of the validation result. Finally, the validation result can be found at ``${user.dir}/validation_result_${current.timestamp}.md``.
 
-3.  In the case that you need to validate the cube file manually and independently, you need to run ``java -jar nospa-rdf-data-cube-validator-0.9-jar-with-dependencies.jar your_cube_file.ttl file_format_in_uppercase``, where the first argument is the file path of the cube to be validated and the second argument is the RDF format of the cube file. If no arguments are provided, the default value will be ``test.ttl`` in the same folder as the jar file and ``TURTLE``. This configuration can be modified by accessing to the ``config.properties`` file.
+3.  In the case that you need to validate the cube file manually and independently, you need to run ``java -jar nospa-rdf-data-cube-validator-0.9.9-jar-with-dependencies.jar your_cube_file.ttl file_format_in_uppercase``, where the first argument is the file path of the cube to be validated and the second argument is the RDF format of the cube file. If no arguments are provided, the default value will be ``test.ttl`` in the same folder as the jar file and ``TURTLE``. This configuration can be modified by accessing to the ``config.properties`` file.
 
 ### Performance
 
