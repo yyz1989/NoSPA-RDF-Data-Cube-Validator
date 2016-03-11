@@ -74,7 +74,7 @@ Basically, there are 3 ways to use it:
 
     Note that the validation result of this tool will be recorded as logs so you need to turn on the logs for this package in the log configuration of your own project. Additionally you have to set a system property ``current.timestamp`` with the value of current time as part of the name of the validation result. Finally, the validation result can be found at ``${user.dir}/validation_result_${current.timestamp}.md``.
 
-3.  In the case that you need to validate the cube file manually and independently, you need to run ``java -jar nospa-rdf-data-cube-validator-0.9.9-jar-with-dependencies.jar your_cube_file.ttl file_format_in_uppercase``, where the first argument is the file path of the cube to be validated and the second argument is the RDF format of the cube file. If no arguments are provided, the default value will be ``test.ttl`` in the same folder as the jar file and ``TURTLE``. This configuration can be modified by accessing to the ``config.properties`` file.
+3.  In the case that you need to validate the cube file manually and independently, you need to run ``java -jar nospa-rdf-data-cube-validator-0.9.9-jar-with-dependencies.jar <cube-file.(xml|rdf|nt|n3|ttl)> <(nospa|sparql)>``, where the first argument is the file path of the cube to be validated and the second argument is the name of validator respectively. Currently only 5 RDF format are supported, as can be seen from the file extension name. The validator can be "nospa" power by this tool, or "sparql" which runs the official validation SPARQL queries against the cube with Jena ARQ.
 
 ### Performance
 
